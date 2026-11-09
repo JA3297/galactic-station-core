@@ -2,7 +2,7 @@
 -- Put this file in the ROOT of your GitHub repository.
 -- Edit REPO_BASE to your own raw.githubusercontent.com repository URL.
 
-local REPO_BASE = "https://raw.githubusercontent.com/YOUR_GITHUB_NAME/YOUR_REPOSITORY/main/"
+local REPO_BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-core/main/"
 local internet = require("internet")
 local filesystem = require("filesystem")
 
