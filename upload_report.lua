@@ -1,67 +1,88 @@
--- Galactic Station hardware report uploader
--- OpenOS / OpenComputers Lua
--- Uploads /tmp/main_service_hardware_report.txt to paste.rs.
--- The resulting paste URL is public. Do not use for credentials or secrets.
+-- Galactic Station hardware report uploader / HTTP diagnostic
+-- OpenOS / OpenComputers Lua.
+-- Reads /tmp/main_service_hardware_report.txt and POSTs its raw contents.
+-- Paste URLs are public. Do not upload credentials or private configs.
 
 local source = "/tmp/main_service_hardware_report.txt"
-local f, err = io.open(source, "r")
-if not f then
-  print("Could not open report: " .. tostring(err))
-  print("Run the hardware scan first:")
-  print("  lua /usr/bin/main_service.lua scan")
+
+local file, fileErr = io.open(source, "rb")
+if not file then
+  print("Cannot open " .. source .. ": " .. tostring(fileErr))
+  print("Run: lua /usr/bin/main_service.lua scan")
   return
 end
 
-local data = f:read("*a")
-f:close()
+local data = file:read("*a")
+file:close()
 
-if not data or data == "" then
-  print("The report file is empty.")
+if not data or #data == 0 then
+  print("The report is empty.")
+  return
+end
+
+local component = require("component")
+local address = component.list("internet")()
+if not address then
+  print("No Internet Card component is visible to this computer.")
   return
 end
 
 print("Report size: " .. tostring(#data) .. " bytes")
-print("Uploading as raw POST data...")
+print("Opening raw HTTP POST to paste.rs ...")
 
-local ok, request = pcall(function()
-  return require("internet").request(
-    "https://paste.rs/",
-    data,
-    {
-      ["Content-Type"] = "application/octet-stream",
-      ["Accept"] = "text/plain"
-    },
-    "POST"
-  )
-end)
-
+local internet = component.proxy(address)
+local ok, request = pcall(internet.request, "https://paste.rs/", data)
 if not ok or not request then
-  print("Upload request failed: " .. tostring(request))
-  print("Check Internet Card HTTP access and server settings.")
+  print("Could not start HTTP request: " .. tostring(request))
   return
 end
 
-local response = ""
-local readOK, readErr = pcall(function()
-  for chunk in request do
-    response = response .. chunk
+local connected, connectErr = pcall(function()
+  request.finishConnect()
+end)
+if not connected then
+  print("HTTP connection failed: " .. tostring(connectErr))
+  pcall(function() request.close() end)
+  return
+end
+
+local status, message, headers
+local responseOK, responseErr = pcall(function()
+  status, message, headers = request.response()
+end)
+if not responseOK then
+  print("Could not read HTTP status: " .. tostring(responseErr))
+  pcall(function() request.close() end)
+  return
+end
+
+local body = ""
+local bodyOK, bodyErr = pcall(function()
+  while true do
+    local chunk = request.read(2048)
+    if not chunk or #chunk == 0 then break end
+    body = body .. chunk
   end
 end)
+pcall(function() request.close() end)
 
-if not readOK then
-  print("The paste service rejected the upload: " .. tostring(readErr))
-  print("The report remains saved at " .. source)
-  print("Fallback: run 'cat " .. source .. "' and send terminal screenshots.")
-  return
+print("HTTP status: " .. tostring(status) .. " " .. tostring(message))
+if body ~= "" then
+  print("Server response:")
+  print(body)
 end
 
-response = response:gsub("^%s+", ""):gsub("%s+$", "")
-if response:match("^https?://") then
-  print("")
-  print("REPORT UPLOADED SUCCESSFULLY")
-  print(response)
+if status and status >= 200 and status < 300 then
+  local url = body:match("(https?://%S+)")
+  if url then
+    print("")
+    print("REPORT UPLOADED:")
+    print(url)
+  else
+    print("Upload accepted, but no URL was found in the response.")
+  end
 else
-  print("Paste service response:")
-  print(response)
-  print("The report remains saved at " .. source)
+  print("Upload was not accepted. The report remains at " .. source)
+  print("Response read: " .. tostring(bodyOK))
+  if not bodyOK then print("Response read error: " .. tostring(bodyErr)) end
 end
