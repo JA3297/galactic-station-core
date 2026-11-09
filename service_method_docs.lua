@@ -1,21 +1,43 @@
--- Galactic Station: Targeted machine API documentation probe
--- Safe discovery only: calls component.methods and component.doc.
--- DOES NOT invoke any machine getter, setter, transfer, or control method.
+-- Galactic Station: Targeted service-equipment API documentation probe
+-- OpenComputers / OpenOS Lua 5.2
 --
--- Usage:
+-- SAFE: only reads component.methods() and component.doc().
+-- It does NOT invoke any machine getter, setter, transfer, or control method.
+--
+-- Run:
 --   lua /tmp/service_method_docs.lua
 --
--- Output:
---   /tmp/main_service_method_docs.txt
+-- It displays useful getter/status/transfer method signatures and their docs.
+-- Full inventory is left in /tmp/main_service_hardware_report.txt.
 
 local component = require("component")
+
 local keywords = {
   "oxygen", "sealer", "pump", "water", "separator",
   "generator", "energy", "electric"
 }
 
-local function matches(typeName)
-  local lower = string.lower(typeName or "")
+local selectedMethods = {
+  canExtract=true, canReceive=true,
+  getDemandedEnergy=true, getDocs=true,
+  getEnergy=true, getEnergyCapacity=true, getEnergyNeeded=true,
+  getEnergyStored=true, getEUCapacity=true, getEUOutput=true,
+  getEUStored=true, getHydrogen=true, getHydrogenNeeded=true,
+  getItemMeta=true, getMaxEnergy=true, getMaxEnergyStored=true,
+  getMetadata=true, getOxygen=true, getOxygenTank=true,
+  getOutput=true, getRFStored=true, getRFCapacity=true,
+  getSinkTier=true, getStoredEnergy=true, getTanks=true,
+  getTransferLocations=true, getWater=true, getWaterTank=true,
+  isEnabled=true, isSealed=true, isThermalControlEnabled=true,
+  isThermalControlWorking=true, setEnabled=true,
+  pullFluid=true, pushFluid=true, getFluid=true, getTankInfo=true,
+  getFuel=true, getFuelTank=true, getHydrogenTank=true,
+  getOxygenLevel=true, getOxygenSupply=true,
+  getProduced=true, getProduction=true
+}
+
+local function containsKeyword(name)
+  local lower = string.lower(name or "")
   for _, word in ipairs(keywords) do
     if lower:find(word, 1, true) then return true end
   end
@@ -32,81 +54,78 @@ end
 local entries = {}
 for address, typeName in component.list() do
   typeName = tostring(typeName)
-  if matches(typeName) then
-    entries[#entries + 1] = {
-      address = tostring(address),
-      typeName = typeName
-    }
+  if containsKeyword(typeName) then
+    entries[#entries + 1] = {address=tostring(address), typeName=typeName}
   end
 end
 
-table.sort(entries, function(a, b)
+table.sort(entries, function(a,b)
   if a.typeName == b.typeName then return a.address < b.address end
   return a.typeName < b.typeName
 end)
 
 local lines = {
-  "GALACTIC STATION - SERVICE EQUIPMENT API DOCUMENTATION",
-  "Safe metadata probe. No machine methods were invoked.",
+  "GALACTIC STATION - SERVICE EQUIPMENT API DOCS",
+  "Metadata-only probe; no machine functions invoked.",
   "Matching components: " .. tostring(#entries),
-  string.rep("=", 64)
+  string.rep("=", 58)
 }
 
 for index, item in ipairs(entries) do
   lines[#lines + 1] = ""
-  lines[#lines + 1] = string.format("[%02d] TYPE: %s", index, item.typeName)
-  lines[#lines + 1] = "ADDRESS: " .. item.address
+  lines[#lines + 1] = string.format("[%02d] %s", index, item.typeName)
+  lines[#lines + 1] = "Address: " .. item.address
 
   local ok, methods = pcall(component.methods, item.address)
   if not ok or type(methods) ~= "table" then
-    lines[#lines + 1] = "METHOD LIST ERROR: " .. tostring(methods)
+    lines[#lines + 1] = "Methods error: " .. tostring(methods)
   else
-    for _, methodName in ipairs(sortedKeys(methods)) do
-      local docOK, documentation = pcall(component.doc, item.address, methodName)
-      if not docOK then
-        documentation = "[documentation error: " .. tostring(documentation) .. "]"
-      elseif documentation == nil or documentation == "" then
-        documentation = "[no documentation exposed]"
+    local selected = {}
+    for methodName in pairs(methods) do
+      if selectedMethods[methodName] then selected[#selected + 1] = methodName end
+    end
+    table.sort(selected)
+
+    if #selected == 0 then
+      lines[#lines + 1] = "No selected status/energy/fluid methods exposed."
+      lines[#lines + 1] = "All exposed method names: " .. table.concat(sortedKeys(methods), ", ")
+    else
+      for _, methodName in ipairs(selected) do
+        local docOK, documentation = pcall(component.doc, item.address, methodName)
+        if not docOK then
+          documentation = "[documentation error: " .. tostring(documentation) .. "]"
+        elseif documentation == nil or documentation == "" then
+          documentation = "[no documentation exposed]"
+        end
+        documentation = tostring(documentation):gsub("\r", " "):gsub("\n", " ")
+        lines[#lines + 1] = methodName .. " : " .. documentation
       end
-      documentation = tostring(documentation):gsub("\r", " "):gsub("\n", " ")
-      lines[#lines + 1] = "  " .. tostring(methodName) .. " : " .. documentation
     end
   end
-  lines[#lines + 1] = string.rep("-", 64)
+  lines[#lines + 1] = string.rep("-", 58)
 end
 
-if #entries == 0 then
-  lines[#lines + 1] = "No matching components found."
-end
-
-local outputPath = "/tmp/main_service_method_docs.txt"
-local file, err = io.open(outputPath, "w")
+local path = "/tmp/main_service_method_docs.txt"
+local file, err = io.open(path, "w")
 if not file then
-  print("Cannot write report: " .. tostring(err))
+  print("Cannot write " .. path .. ": " .. tostring(err))
   return
 end
 file:write(table.concat(lines, "\n"), "\n")
 file:close()
 
-local width = 58
 local wrapped = {}
 for _, line in ipairs(lines) do
-  if #line <= width then
-    wrapped[#wrapped + 1] = line
-  else
-    local remaining = line
-    while #remaining > width do
-      local splitAt = width
-      local space = remaining:sub(1, width):match(".*() ")
-      if space and space > 12 then splitAt = space end
-      wrapped[#wrapped + 1] = remaining:sub(1, splitAt)
-      remaining = "    " .. remaining:sub(splitAt + 1):gsub("^%s+", "")
-    end
-    if #remaining > 0 then wrapped[#wrapped + 1] = remaining end
+  while #line > 58 do
+    local splitAt = line:sub(1,58):match(".*() ")
+    if not splitAt or splitAt < 10 then splitAt = 58 end
+    wrapped[#wrapped + 1] = line:sub(1,splitAt)
+    line = "  " .. line:sub(splitAt + 1):gsub("^%s+", "")
   end
+  wrapped[#wrapped + 1] = line
 end
 
-print("Saved full documentation to " .. outputPath)
+print("Saved full docs to " .. path)
 local pageSize = 15
 local pageCount = math.ceil(#wrapped / pageSize)
 local okTerm, term = pcall(require, "term")
@@ -124,4 +143,4 @@ for page = 1, pageCount do
   end
 end
 
-print("Documentation probe complete. No equipment was controlled.")
+print("Probe complete. No equipment state was changed.")
