@@ -47,8 +47,9 @@ function M.event(name, severity, detail)
   send("station_event", {event = name, severity = severity or "INFO", detail = detail or "", module_id = CFG.module_id})
 end
 
-function M.heartbeat()
-  send("node_heartbeat", {active = true, state = "LOCAL_AUTONOMOUS", services = {"module_agent"},
+function M.heartbeat(services)
+  if type(services) ~= "table" then services = {"module_agent"} end
+  send("node_heartbeat", {active = true, state = "LOCAL_AUTONOMOUS", services = services,
     uptime = computer.uptime(), free_memory = computer.freeMemory(), total_memory = computer.totalMemory()})
 end
 
