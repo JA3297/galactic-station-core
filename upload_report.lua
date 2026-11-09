@@ -20,11 +20,18 @@ if not data or data == "" then
   return
 end
 
+print("Report size: " .. tostring(#data) .. " bytes")
+print("Uploading as raw POST data...")
+
 local ok, request = pcall(function()
   return require("internet").request(
     "https://paste.rs/",
     data,
-    { ["Content-Type"] = "text/plain" }
+    {
+      ["Content-Type"] = "application/octet-stream",
+      ["Accept"] = "text/plain"
+    },
+    "POST"
   )
 end)
 
@@ -42,7 +49,9 @@ local readOK, readErr = pcall(function()
 end)
 
 if not readOK then
-  print("Could not read upload response: " .. tostring(readErr))
+  print("The paste service rejected the upload: " .. tostring(readErr))
+  print("The report remains saved at " .. source)
+  print("Fallback: run 'cat " .. source .. "' and send terminal screenshots.")
   return
 end
 
@@ -54,5 +63,5 @@ if response:match("^https?://") then
 else
   print("Paste service response:")
   print(response)
-  print("If this is an error page, copy it back here.")
+  print("The report remains saved at " .. source)
 end
