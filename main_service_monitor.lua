@@ -396,7 +396,7 @@ while true do
   end
 
   if station and now - lastHeartbeat >= HEARTBEAT_SECONDS then
-    local ok, err = pcall(station.heartbeat)
+    local ok, err = pcall(station.heartbeat, {"main_service_monitor", "life_support", "resources"})
     if not ok then errorList[#errorList + 1] = "Heartbeat: " .. tostring(err) end
     lastHeartbeat = now
   end
