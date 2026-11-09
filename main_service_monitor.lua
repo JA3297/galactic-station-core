@@ -71,7 +71,7 @@ local READ_METHODS = {
 local function sortedKeys(t)
   local out = {}
   for k in pairs(t or {}) do out[#out + 1] = k end
-  table.sort(out)
+  table.sort(out, function(a, b) return tostring(a) < tostring(b) end)
   return out
 end
 
@@ -155,7 +155,10 @@ local function readGetter(address, methodName)
     return nil, "ERROR: " .. tostring(result[2])
   end
   local values = {}
-  for i = 2, #result do values[#values + 1] = result[i] end
+  -- Skip nil return slots and preserve every non-nil value.
+  for i = 2, 12 do
+    if result[i] ~= nil then values[#values + 1] = result[i] end
+  end
   if #values == 0 then return "no return value" end
   if #values == 1 then return values[1] end
   return values
