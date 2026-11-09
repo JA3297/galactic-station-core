@@ -306,44 +306,46 @@ local function render(items, errorList)
   local ok, term = pcall(require, "term")
   if ok and term and term.clear then pcall(term.clear) end
 
-  print("============================================================")
-  print(" GALACTIC STATION | MAIN SERVICE LIFE SUPPORT")
-  print("============================================================")
-  print("Controller: " .. VERSION .. " | Module: " .. MODULE_ID)
-  print(string.format("Uptime: %.1f s | Computer memory free: %d / %d bytes",
-    computer.uptime(), computer.freeMemory(), computer.totalMemory()))
-  print("Station network: " .. (station and "CONNECTED" or "LOCAL ONLY"))
-  if stationError then print("Station API: " .. stationError) end
-  print("")
-
   local totals = {}
   for _, item in ipairs(items) do
     totals[item.category] = (totals[item.category] or 0) + 1
-    print(string.format("[%s] %s", item.category, item.typeName))
-    print("Address: " .. item.address)
-    print("Readings: " .. lineFor(item))
-    if item.category == "ENERGY_CUBE" or item.category == "ENERGY_DEVICE" or item.category == "GAS_GENERATOR" then
-      local stored = firstNumeric(item, {"getEnergyStored", "getEUStored", "getStoredEnergy", "getRFStored"})
-      local capacity = firstNumeric(item, {"getEnergyCapacity", "getEUCapacity", "getMaxEnergyStored", "getRFCapacity"})
-      local percent = formatPercent(stored, capacity)
-      if percent then print("Energy charge: " .. percent) end
-    end
-    print("Methods: " .. tostring(item.exposedMethodCount) .. " exposed; " .. tostring(item.readableMethodCount) .. " safe getters sampled")
-    print("------------------------------------------------------------")
   end
 
-  print("EQUIPMENT COUNTS")
-  for _, category in ipairs({"OXYGEN_SEALER", "PUMP", "ELECTROLYTIC_SEPARATOR", "GAS_GENERATOR", "ENERGY_CUBE", "ENERGY_DEVICE", "OXYGEN_PIPE"}) do
-    print(string.format("  %-26s %d", category, totals[category] or 0))
+  print("============================================================")
+  print(" GALACTIC STATION | MAIN SERVICE LIFE SUPPORT")
+  print("============================================================")
+  print("Controller " .. VERSION .. " | " .. MODULE_ID)
+  print(string.format("Uptime %.0fs | RAM %d/%d bytes free",
+    computer.uptime(), computer.freeMemory(), computer.totalMemory()))
+  print("Station network: " .. (station and "CONNECTED" or "LOCAL ONLY"))
+  print("------------------------------------------------------------")
+
+  for _, item in ipairs(items) do
+    local label = item.category
+    if item.category == "OXYGEN_SEALER" then label = "O2 SEALER"
+    elseif item.category == "ELECTROLYTIC_SEPARATOR" then label = "ELECTROLYZER"
+    elseif item.category == "GAS_GENERATOR" then label = "GAS GENERATOR"
+    elseif item.category == "ENERGY_CUBE" then label = "ENERGY CUBE"
+    elseif item.category == "ENERGY_DEVICE" then label = "ENERGY DEVICE"
+    elseif item.category == "OXYGEN_PIPE" then label = "O2 PIPE"
+    elseif item.category == "PUMP" then label = "WATER PUMP" end
+
+    local readings = lineFor(item)
+    if #readings > 82 then readings = readings:sub(1, 79) .. "..." end
+    print(string.format("%-15s %s", label, readings))
   end
+
+  print("------------------------------------------------------------")
+  print(string.format("Sealers %d | Pumps %d | Separator %d",
+    totals.OXYGEN_SEALER or 0, totals.PUMP or 0, totals.ELECTROLYTIC_SEPARATOR or 0))
+  print(string.format("Generator %d | Energy cubes %d | O2 pipes %d",
+    totals.GAS_GENERATOR or 0, totals.ENERGY_CUBE or 0, totals.OXYGEN_PIPE or 0))
   if errorList and #errorList > 0 then
-    print("")
-    print("READ WARNINGS")
-    for i = 1, math.min(#errorList, 5) do print("  " .. errorList[i]) end
+    print("Getter warnings: " .. tostring(#errorList) .. " (details in snapshot)")
+  else
+    print("Getter warnings: none")
   end
-  print("")
-  print("READ-ONLY MODE. Equipment is not being switched or reconfigured.")
-  print("Refresh: " .. REFRESH_SECONDS .. " seconds | Stop: Ctrl+C")
+  print("READ-ONLY | refresh " .. REFRESH_SECONDS .. "s | Ctrl+C to stop")
 end
 
 local function saveSnapshot(items)
