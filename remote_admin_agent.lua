@@ -310,17 +310,17 @@ local function perform(operation, args, clientId)
     local data = f:read("*a") or ""
     f:close()
     if start > 0 then
-      local firstNewline = data:find("\\n", 1, true)
+      local firstNewline = data:find("\n", 1, true)
       if firstNewline then data = data:sub(firstNewline + 1) end
     end
     local lines = {}
-    for line in data:gmatch("[^\\r\\n]+") do
+    for line in data:gmatch("[^\r\n]+") do
       lines[#lines + 1] = line
     end
     local output = {}
     local first = math.max(1, #lines - lineCount + 1)
     for i = first, #lines do output[#output + 1] = lines[i] end
-    return {path = path, lines = #output, text = table.concat(output, "\\n"), truncated = start > 0}
+    return {path = path, lines = #output, text = table.concat(output, "\n"), truncated = start > 0}
 
   elseif operation == "write_chunk" then
     local path, err = canonicalPath(args.path)
