@@ -86,6 +86,11 @@ if #modems == 0 then error("No modem attached to this management computer.") end
 
 local inbox = {}
 local nodes = {}
+local diagnostic = {
+  events = 0, port_packets = 0, bad_payload = 0, bad_mac = 0,
+  bad_reply = 0, authenticated_replies = 0
+}
+local keyFingerprint = crypto.hex(crypto.sha256(key)):sub(1, 16)
 local selected = nil
 local cwd = "/"
 
@@ -95,20 +100,37 @@ local function seal(body)
 end
 
 local function onMessage(_, localAddress, remoteAddress, port, distance, payload)
-  if port ~= PORT or type(payload) ~= "string" or #payload > 7000 then return end
+  diagnostic.events = diagnostic.events + 1
+  if port ~= PORT then return end
+  diagnostic.port_packets = diagnostic.port_packets + 1
+  if type(payload) ~= "string" or #payload > 7000 then
+    diagnostic.bad_payload = diagnostic.bad_payload + 1
+    return
+  end
   local ok, envelope = pcall(serialization.unserialize, payload)
-  if not ok or type(envelope) ~= "table" or type(envelope.body) ~= "string" or type(envelope.mac) ~= "string" then return end
-  if not crypto.equal(crypto.hmac(key, envelope.body), envelope.mac) then return end
+  if not ok or type(envelope) ~= "table" or type(envelope.body) ~= "string" or type(envelope.mac) ~= "string" then
+    diagnostic.bad_payload = diagnostic.bad_payload + 1
+    return
+  end
+  if not crypto.equal(crypto.hmac(key, envelope.body), envelope.mac) then
+    diagnostic.bad_mac = diagnostic.bad_mac + 1
+    return
+  end
   local bodyOK, body = pcall(serialization.unserialize, envelope.body)
   if not bodyOK or type(body) ~= "table" or body.protocol ~= PROTOCOL or
-     body.network ~= NETWORK_ID or body.kind ~= "reply" or body.client_id ~= clientId then return end
+     body.network ~= NETWORK_ID or body.kind ~= "reply" or body.client_id ~= clientId then
+    diagnostic.bad_reply = diagnostic.bad_reply + 1
+    return
+  end
+  diagnostic.authenticated_replies = diagnostic.authenticated_replies + 1
   local list = inbox[body.request_id] or {}
   list[#list + 1] = {body = body, address = remoteAddress, local_address = localAddress}
   inbox[body.request_id] = list
 end
 
 local listenerId = event.listen("modem_message", onMessage)
-if not listenerId then error("Could not register management response listener.") end
+local legacyListenerId = event.listen("modem", onMessage)
+if not listenerId and not legacyListenerId then error("Could not register management response listener.") end
 
 local function sendRequest(target, operation, args, timeout, collectAll)
   local seq = nextSequence()
@@ -168,8 +190,18 @@ end
 
 local function discover()
   print("Discovering authenticated station nodes...")
-  local replies, err = sendRequest("*", "discover", {}, 2.0, true)
-  if not replies then print("Discovery failed: " .. tostring(err)); return end
+  diagnostic.events, diagnostic.port_packets = 0, 0
+  diagnostic.bad_payload, diagnostic.bad_mac = 0, 0
+  diagnostic.bad_reply, diagnostic.authenticated_replies = 0, 0
+  local replies, err = sendRequest("*", "discover", {}, 5.0, true)
+  if not replies then
+    print("Discovery failed: " .. tostring(err))
+    print(string.format("Diagnostics: events=%d port45822=%d badPayload=%d badHMAC=%d badReply=%d",
+      diagnostic.events, diagnostic.port_packets, diagnostic.bad_payload,
+      diagnostic.bad_mac, diagnostic.bad_reply))
+    print("Manager network=" .. NETWORK_ID .. " key fingerprint=" .. keyFingerprint)
+    return
+  end
   local count = 0
   for _, entry in ipairs(replies) do
     local info = entry.body.result
@@ -442,6 +474,7 @@ print("============================================================")
 print(" GALACTIC STATION | REMOTE ADMIN CONSOLE")
 print("============================================================")
 print("Client: " .. clientId)
+print("Network: " .. NETWORK_ID .. " | key fingerprint: " .. keyFingerprint)
 print("Network port: " .. PORT .. " | HMAC authenticated | not encrypted")
 print("Type 'help'. Run 'discover' to find managed computers.")
 print("")
