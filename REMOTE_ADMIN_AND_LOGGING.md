@@ -95,6 +95,14 @@ View the last log lines after selecting CORE-A4 or CORE-B4:
 logs 100
 ```
 
+The console also has a diagnostic export helper:
+
+```text
+collect CORE-A4
+```
+
+It saves the node identity, recent local station events, local logger spool, recent central archive log, and (when present) a bounded Main Service snapshot to `/home/station-diagnostics/CORE-A4/` on the management computer. You can then inspect or transfer those files from the manager.
+
 Export a full log to the management computer:
 
 ```text
