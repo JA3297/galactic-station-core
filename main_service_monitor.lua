@@ -394,6 +394,21 @@ while true do
     end
     render(items, errorList)
     saveSnapshot(items)
+    local signatureParts = {}
+    for _, message in ipairs(errorList) do signatureParts[#signatureParts + 1] = message end
+    table.sort(signatureParts)
+    local currentErrorSignature = table.concat(signatureParts, "|")
+    if currentErrorSignature ~= lastErrorSignature then
+      if currentErrorSignature == "" then
+        logEvent("INFO", "Equipment getter warnings cleared")
+      else
+        logEvent("WARNING", "Equipment getter warning state changed", {
+          warning_count = #errorList,
+          details = table.concat(signatureParts, " | "):sub(1, 900)
+        })
+      end
+      lastErrorSignature = currentErrorSignature
+    end
     lastRefresh = now
   end
 
