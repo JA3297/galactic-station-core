@@ -2,7 +2,7 @@
 -- OpenOS / OpenComputers Lua 5.2.
 --
 -- Commands: help, discover, nodes, use, info, pwd, ls, cd, cat, get, put,
--- mkdir, rm, mv, exec, update, logs, exit.
+-- mkdir, rm, mv, exec, reboot, update, logs, collect, exit.
 --
 -- Requires an Internet Card only for the GitHub "update" command.
 -- Requires /etc/station/remote_admin.key, shared with managed nodes.
@@ -417,8 +417,10 @@ local function printHelp()
   print("  rm <path>                delete after typed confirmation")
   print("  mv <from> <to>           rename/move remote path")
   print("  exec uptime|memory|components|mounts|services")
-  print("  update <node-id>         stage files from the GitHub manifest")
-  print("  logs [path]              read the selected node's station log")
+  print("  reboot                   reboot after exact node-specific confirmation")
+  print("  update <node-id|all>     stage files from the GitHub manifest")
+  print("  logs [lines]             show the last lines of the central archive log")
+  print("  collect [node-id]        save a local diagnostic bundle")
   print("  help | exit")
   print("")
   print("Paths with spaces may be enclosed in quotes.")
