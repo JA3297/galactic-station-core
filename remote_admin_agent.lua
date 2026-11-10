@@ -394,6 +394,13 @@ local function perform(operation, args, clientId)
     local result, err = safeExec(tostring(args.command or ""))
     if not result then return nil, err end
     return result
+
+  elseif operation == "reboot" then
+    if args.confirm ~= "REBOOT " .. nodeId then
+      return nil, "confirmation mismatch; expected REBOOT " .. nodeId
+    end
+    audit("WARNING", "remote reboot authorized", clientId)
+    return {node_id = nodeId, rebooting = true}
   end
 
   return nil, "unknown operation"
@@ -434,6 +441,11 @@ local function handleMessage(_, localAddress, remoteAddress, port, distance, pay
     audit("WARNING", "remote operation denied/failed " .. tostring(request.operation), tostring(err))
   end
   sendReply(localAddress, remoteAddress, request, success, result, err)
+  if success and request.operation == "reboot" then
+    event.timer(0.25, function()
+      computer.shutdown(true)
+    end, 1)
+  end
 end
 
 local listenerId = event.listen("modem_message", handleMessage)
