@@ -85,6 +85,8 @@ All managed computers can use `/usr/lib/station_logger.lua`:
 - the archive log rotates at 512 KiB with four old rotations;
 - duplicate packets are suppressed using record IDs.
 
+The local spool preserves records when the archive link is unavailable, but this version does not yet implement acknowledgement/replay from the local spool. Retrieve a host's local spool with the remote console's `get` command if you need records that did not reach A4/B4.
+
 The current integration sends station core events, witness lease grants/expirations, remote-admin audit records, module-agent command/alarm visibility, and Main Service monitor start/getter-warning changes. It does not capture every arbitrary `print()` written by every Lua program.
 
 **This is an application-level mirrored archive, not RAID.** CORE-A4 and CORE-B4 each store a copy on their own local filesystem. That protects against losing one archive computer, but it is not a hardware RAID array and does not guarantee the two copies are always perfectly synchronized during a power/network failure.
