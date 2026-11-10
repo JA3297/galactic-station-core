@@ -1,3 +1,5 @@
+> **Listener lifecycle fix (v3.0.3):** Remote administration and archive collector startup services now keep their detached OpenOS listener threads alive after initialization. Use the updated `remote_admin_rc.lua` and `station_log_collector_rc.lua` from GitHub. This fixes a driver-mode listener lifecycle bug in earlier builds.
+>
 # Galactic Station v3 — Blank-Slate Installation Guide
 
 This is the replacement installation procedure for a new or rebuilt OpenComputers station. Use `station_bootstrap.lua`; do not use the older separate installer instructions for a new deployment.
