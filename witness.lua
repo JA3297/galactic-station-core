@@ -60,6 +60,11 @@ end
 local seq = 0
 local bootId = computer.address() .. ":" .. tostring(math.floor(computer.uptime() * 1000))
 local lastSequence, lastSession = {}, {}
+local stationLogger
+do
+  local loggerOK, loggerValue = pcall(require, "station_logger")
+  if loggerOK then stationLogger = loggerValue end
+end
 local function send(kind, data)
   seq = seq + 1
   local packet = {magic = MAGIC, protocol = PROTOCOL, network = CFG.network_id,
@@ -80,6 +85,10 @@ local function grant(pairId, p, side, currentTime)
   send("lease_grant", {pair_id = pairId, holder_node = nodeId, holder_side = side,
     epoch = p.epoch, ttl = GRANT_TTL})
   print(string.format("LEASE GRANTED: %s -> %s (%s), epoch %d", pairId, nodeId, side, p.epoch))
+  if stationLogger and stationLogger.write then
+    pcall(stationLogger.write, "INFO", "witness.lease_granted",
+      pairId .. " -> " .. nodeId .. " (" .. side .. "), epoch " .. tostring(p.epoch))
+  end
 end
 
 local function announceCurrent(pairId, p, currentTime)
@@ -144,6 +153,10 @@ while true do
   for pairId, p in pairs(pairsState) do
     if p.owner and t >= p.until_time then
       print("LEASE EXPIRED: " .. pairId .. " / " .. tostring(p.config[p.owner]))
+      if stationLogger and stationLogger.write then
+        pcall(stationLogger.write, "WARNING", "witness.lease_expired",
+          pairId .. " / " .. tostring(p.config[p.owner]))
+      end
       p.owner = nil
       p.until_time = 0
       p.first_request = t
