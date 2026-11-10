@@ -426,7 +426,7 @@ local function printHelp()
   print("  reboot                   reboot after exact node-specific confirmation")
   print("  update <node-id|all>     stage files from the GitHub manifest")
   print("  logs [lines]             show the last lines of the central archive log")
-  print("  collect [node-id]        save a local diagnostic bundle")
+  print("  collect <node-id|all>     save local diagnostic bundle(s)")
   print("  help | exit")
   print("")
   print("Paths with spaces may be enclosed in quotes.")
@@ -609,8 +609,13 @@ while true do
     end
   elseif cmd == "collect" then
     local target = w[2] or selected
-    if not target then
-      print("Usage: collect <node-id> (or select a node first)")
+    if target == "all" then
+      local ids = {}
+      for id in pairs(nodes) do ids[#ids + 1] = id end
+      table.sort(ids)
+      for _, id in ipairs(ids) do collectDiagnostics(id) end
+    elseif not target then
+      print("Usage: collect <node-id|all> (or select a node first)")
     else
       collectDiagnostics(target)
     end
