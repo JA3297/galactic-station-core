@@ -1,15 +1,93 @@
 -- Galactic Station remote administration cryptography.
--- Pure Lua 5.2 SHA-256 and HMAC-SHA256 using the standard bit32 library.
--- No Data Card is required. HMAC provides authenticity/integrity, not secrecy.
+-- Pure Lua SHA-256 and HMAC-SHA256.
+--
+-- Compatibility note:
+-- OpenComputers may run under LuaJ, where the standard bit32 library can be
+-- absent even though the target uses Lua 5.2 semantics. This implementation
+-- therefore uses exact 32-bit arithmetic and a nibble lookup table only.
+-- It has no bit32, native bitwise, Data Card, or external-library dependency.
+--
+-- HMAC authenticates/integrity-protects packets; it does NOT encrypt them.
 
-local bit = bit32
-if not bit then
-  error("admin_crypto requires Lua 5.2 bit32 support. Install a compatible OpenOS Lua 5.2 runtime.")
+local MOD = 4294967296
+local MASK = MOD - 1
+local floor = math.floor
+
+-- Build 4-bit truth tables once. Every 32-bit operation is composed from
+-- eight nibbles. All intermediate integer values remain exactly representable
+-- by Lua's IEEE-754 double number type.
+local LOOKUP = {{}, {}, {}}
+for a = 0, 15 do
+  LOOKUP[1][a] = {}
+  LOOKUP[2][a] = {}
+  LOOKUP[3][a] = {}
+  for b = 0, 15 do
+    local aa, bb = a, b
+    local andValue, orValue, xorValue = 0, 0, 0
+    local place = 1
+    for _ = 1, 4 do
+      local abit = aa % 2
+      local bbit = bb % 2
+      if abit == 1 and bbit == 1 then andValue = andValue + place end
+      if abit == 1 or bbit == 1 then orValue = orValue + place end
+      if abit ~= bbit then xorValue = xorValue + place end
+      aa = floor(aa / 2)
+      bb = floor(bb / 2)
+      place = place * 2
+    end
+    LOOKUP[1][a][b] = andValue
+    LOOKUP[2][a][b] = orValue
+    LOOKUP[3][a][b] = xorValue
+  end
 end
+
+local function bitop2(a, b, operation)
+  a = a % MOD
+  b = b % MOD
+  local result, place = 0, 1
+  local tableForOperation = LOOKUP[operation]
+  for _ = 1, 8 do
+    local na = a % 16
+    local nb = b % 16
+    result = result + tableForOperation[na][nb] * place
+    a = floor(a / 16)
+    b = floor(b / 16)
+    place = place * 16
+  end
+  return result
+end
+
+local function fold(operation, initial, ...)
+  local result = initial
+  for i = 1, select("#", ...) do
+    result = bitop2(result, select(i, ...), operation)
+  end
+  return result
+end
+
+local bit = {
+  band = function(...) return fold(1, MASK, ...) end,
+  bor = function(...) return fold(2, 0, ...) end,
+  bxor = function(...) return fold(3, 0, ...) end,
+  bnot = function(x) return MASK - (x % MOD) end,
+  rshift = function(x, displacement)
+    displacement = floor(displacement)
+    if displacement <= 0 then return x % MOD end
+    if displacement >= 32 then return 0 end
+    return floor((x % MOD) / (2 ^ displacement))
+  end,
+  rrotate = function(x, displacement)
+    displacement = floor(displacement) % 32
+    x = x % MOD
+    if displacement == 0 then return x end
+    local divisor = 2 ^ displacement
+    local low = x % divisor
+    return floor(x / divisor) + low * (2 ^ (32 - displacement))
+  end
+}
 
 local band, bxor, bnot = bit.band, bit.bxor, bit.bnot
 local rshift, rrotate = bit.rshift, bit.rrotate
-local MOD = 4294967296
 
 local K = {
   0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,
@@ -50,9 +128,9 @@ end
 
 local function be32(n)
   n = n % MOD
-  local a = math.floor(n / 16777216) % 256
-  local b = math.floor(n / 65536) % 256
-  local c = math.floor(n / 256) % 256
+  local a = floor(n / 16777216) % 256
+  local b = floor(n / 65536) % 256
+  local c = floor(n / 256) % 256
   local d = n % 256
   return string.char(a,b,c,d)
 end
@@ -60,7 +138,7 @@ end
 local function sha256(message)
   assert(type(message) == "string", "sha256 expects a string")
   local bitLength = #message * 8
-  local high = math.floor(bitLength / MOD)
+  local high = floor(bitLength / MOD)
   local low = bitLength % MOD
   local zeroCount = (56 - ((#message + 1) % 64)) % 64
   local padded = message .. string.char(0x80) ..
