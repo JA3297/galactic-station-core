@@ -252,8 +252,16 @@ end
 local function updateNode(nodeId)
   local node = nodes[nodeId]
   if not node then print("Unknown node: " .. nodeId); return end
+  local previousSelected = selected
+  selected = nodeId
+  local function restoreSelection() selected = previousSelected end
+
   local manifest, err = getManifest()
-  if not manifest then print("Cannot load GitHub manifest: " .. tostring(err)); return end
+  if not manifest then
+    print("Cannot load GitHub manifest: " .. tostring(err))
+    restoreSelection()
+    return
+  end
 
   local info = node.info
   local files = {}
@@ -270,18 +278,29 @@ local function updateNode(nodeId)
     addAll(manifest.roles and manifest.roles.module)
     if info.node_id == "MAIN-SERVICE-01" then addAll(manifest.roles and manifest.roles.main_service) end
   else
-    print("No deployment profile for " .. tostring(info.kind)); return
+    print("No deployment profile for " .. tostring(info.kind))
+    restoreSelection()
+    return
   end
 
   print("Staging version " .. tostring(manifest.version) .. " on " .. nodeId)
   for index, item in ipairs(files) do
     io.write(string.format("[%d/%d] %s -> %s ... ", index, #files, item.source, item.destination))
     local data, downloadErr = downloadRaw(REPO_BASE .. item.source)
-    if not data then print("DOWNLOAD FAILED: " .. tostring(downloadErr)); return end
+    if not data then
+      print("DOWNLOAD FAILED: " .. tostring(downloadErr))
+      restoreSelection()
+      return
+    end
     local ok, uploadErr = uploadData(item.destination, data)
-    if not ok then print("UPLOAD FAILED: " .. tostring(uploadErr)); return end
+    if not ok then
+      print("UPLOAD FAILED: " .. tostring(uploadErr))
+      restoreSelection()
+      return
+    end
     print(tostring(#data) .. " bytes")
   end
+  restoreSelection()
   print("Update files staged on " .. nodeId .. ". Running processes are NOT restarted.")
   print("Review the pair/role, then reboot or restart it during a maintenance window.")
 end
