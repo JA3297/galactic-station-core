@@ -115,9 +115,11 @@ local function receiveOne(timeout, wantedId)
         if ok and type(msg) == "table" and msg.protocol == 4 and
            msg.station == cfg.station_id and msg.network == cfg.network_id then
           if msg.kind == "discover_reply" and msg.target == cfg.node_id then
-            nodes[msg.info.node_id] = {
-              address = remoteAddress, info = msg.info, seen = computer.uptime()
-            }
+            if msg.info.node_id ~= cfg.node_id then
+              nodes[msg.info.node_id] = {
+                address = remoteAddress, info = msg.info, seen = computer.uptime()
+              }
+            end
             if not wantedId then return msg end
           elseif msg.kind == "reply" and msg.target == cfg.node_id and
                  msg.request_id == wantedId then
@@ -143,7 +145,8 @@ local function discover()
   end
   local count = 0
   for _ in pairs(nodes) do count = count + 1 end
-  print("Discovered " .. tostring(count) .. " station node(s).")
+  print("Discovered " .. tostring(count) .. " remote node(s).")
+  print("Local management host: " .. cfg.node_id .. " (witness / admin / archive)")
   local ids = {}
   for id in pairs(nodes) do ids[#ids + 1] = id end
   table.sort(ids)
@@ -384,6 +387,7 @@ while true do
   elseif cmd == "discover" then
     discover()
   elseif cmd == "nodes" then
+    print(string.format("%-16s %-13s %-9s %s", cfg.node_id, "hub", "LOCAL", "witness/admin/archive"))
     local ids = {}
     for id in pairs(nodes) do ids[#ids + 1] = id end
     table.sort(ids)
