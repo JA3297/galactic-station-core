@@ -32,6 +32,12 @@ return {
       {source = "station_log_collector.lua", destination = "/usr/lib/station_log_collector.lua"},
       {source = "station_log_collector_rc.lua", destination = "/etc/rc.d/station_log_collector.lua"}
     },
+    safety = {
+      {source = "examples/safety_rules.lua", destination = "/etc/station/safety_rules.lua"}
+    },
+    security = {
+      {source = "examples/acl.lua", destination = "/etc/station/acl.lua"}
+    },
     main_service = {
       {source = "main_service_monitor.lua", destination = "/usr/bin/main_service_monitor.lua"},
       {source = "main_service_monitor_rc.lua", destination = "/etc/rc.d/main_service_monitor.lua"}
