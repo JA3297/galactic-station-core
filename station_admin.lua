@@ -357,6 +357,8 @@ local function updateNode(nodeId)
   if info.kind == "core" then
     addAll(manifest.roles and manifest.roles.core)
     if info.role == "archive" then addAll(manifest.roles and manifest.roles.archive) end
+    if info.role == "safety" then addAll(manifest.roles and manifest.roles.safety) end
+    if info.role == "security" then addAll(manifest.roles and manifest.roles.security) end
   elseif info.kind == "witness" then
     addAll(manifest.roles and manifest.roles.witness)
   elseif info.kind == "module" then
