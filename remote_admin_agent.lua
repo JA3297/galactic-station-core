@@ -93,35 +93,23 @@ end
 
 local function saveReplay()
   local temp = REPLAY_PATH .. ".tmp"
-  local f = io.open(temp, "w")
-  if not f then return end
-  f:write(serialization.serialize(replay))
+  local f, openErr = io.open(temp, "w")
+  if not f then return false, tostring(openErr) end
+  local ok, encoded = pcall(serialization.serialize, replay)
+  if not ok then f:close(); os.remove(temp); return false, tostring(encoded) end
+  local writeOK, writeErr = pcall(function() f:write(encoded) end)
   f:close()
-  os.remove(REPLAY_PATH)
-  os.rename(temp, REPLAY_PATH)
-end
-
-local modems = {}
-for address in component.list("modem", true) do
-  local modem = component.proxy(address)
-  local ok, opened = pcall(modem.open, PORT)
-  if ok then modems[#modems + 1] = modem end
-end
-if #modems == 0 then
-  print("[REMOTE ADMIN] No modem available; agent disabled.")
-  return
-end
-
-local logger
-do
-  local ok, value = pcall(require, "station_logger")
-  if ok then logger = value end
-end
-
-local function audit(level, message, detail)
-  if logger and logger.write then
-    pcall(logger.write, level, "remote_admin", message, {node = nodeId, detail = detail})
+  if not writeOK then os.remove(temp); return false, tostring(writeErr) end
+  local renamed, renameErr = os.rename(temp, REPLAY_PATH)
+  if not renamed then
+    os.remove(REPLAY_PATH)
+    renamed, renameErr = os.rename(temp, REPLAY_PATH)
   end
+  if not renamed then
+    os.remove(temp)
+    return false, tostring(renameErr or "replay state rename failed")
+  end
+  return true
 end
 
 local lastRequestAt = {}
@@ -476,7 +464,14 @@ local function handleMessage(_, localAddress, remoteAddress, port, distance, pay
   local last = tonumber(replay[request.client_id]) or 0
   if request.sequence <= last then return end
   replay[request.client_id] = request.sequence
-  saveReplay()
+  local persisted, persistErr = saveReplay()
+  if not persisted then
+    replay[request.client_id] = last > 0 and last or nil
+    audit("ERROR", "cannot persist anti-replay state", tostring(persistErr))
+    pcall(sendReply, localAddress, remoteAddress, request, false, nil,
+      "refusing remote operation because anti-replay state could not be saved: " .. tostring(persistErr))
+    return
+  end
 
   local operationOK, result, err = pcall(perform, request.operation, request.args, request.client_id)
   if not operationOK then
