@@ -1,3 +1,5 @@
+> **Fresh installation:** use [BLANK_SLATE_INSTALL.md](BLANK_SLATE_INSTALL.md) and the single-file [station_bootstrap.lua](station_bootstrap.lua). This replaces the earlier fragmented setup instructions. It provisions core, witness, module, and management roles from a blank OpenOS installation without formatting the disk.
+>
 > **Current management expansion:** authenticated remote administration, GitHub-driven deployment, and mirrored log collection are documented in [REMOTE_ADMIN_AND_LOGGING.md](REMOTE_ADMIN_AND_LOGGING.md). This is a management overlay on the existing station network, not an SSH implementation: it provides HMAC-authenticated modem messaging, a restricted remote command set, file transfer, staged updates, and mirrored archives. The management traffic is not encrypted.
 
 # Galactic Station Core — OpenComputers
@@ -91,7 +93,7 @@ Management and log traffic use ports 45822 and 45823, separate from the existing
 
 CORE-A4 and CORE-B4 each maintain an independent copy of received logs. This is application-level mirrored storage, **not hardware RAID**. The manager can retrieve logs with `logs` or `get`; it does not automatically publish operational logs to this public repository.
 
-See [REMOTE_ADMIN_AND_LOGGING.md](REMOTE_ADMIN_AND_LOGGING.md) before enabling this feature on the full station. Start with two test nodes, verify key consistency, discovery, read/write transfers, and mirrored logs, then roll out gradually.
+See [BLANK_SLATE_INSTALL.md](BLANK_SLATE_INSTALL.md) for the current end-to-end installation procedure. [REMOTE_ADMIN_AND_LOGGING.md](REMOTE_ADMIN_AND_LOGGING.md) remains the detailed management-plane reference. Start with a fresh OpenOS installation, run the role-aware bootstrap, verify the management console, and then bring up the cluster in the documented order.
 
 ## Module-local integration
 
