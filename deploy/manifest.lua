@@ -1,10 +1,10 @@
 -- Galactic Station deployment manifest.
--- This file is public source metadata. Never put passwords or keys here.
--- station_admin.lua downloads these files from raw.githubusercontent.com and
--- transfers them to targets over the authenticated in-game modem network.
+-- Public software metadata only. Never place keys/passwords here.
+-- The management console downloads these GitHub files and transfers them to
+-- the selected host through authenticated modem management port 45822.
 
 return {
-  version = "2.1.1",
+  version = "3.0.0",
   repository = "JA3297/galactic-station-core",
   common = {
     {source = "admin_crypto.lua", destination = "/usr/lib/admin_crypto.lua"},
@@ -22,8 +22,11 @@ return {
       {source = "witness_rc.lua", destination = "/etc/rc.d/witness.lua"}
     },
     module = {
-      {source = "station_api.lua", destination = "/usr/lib/station_api.lua"},
-      {source = "module_agent.lua", destination = "/usr/bin/module_agent.lua"}
+      {source = "station_api.lua", destination = "/usr/lib/station_api.lua"}
+    },
+    module_agent = {
+      {source = "module_agent.lua", destination = "/usr/bin/module_agent.lua"},
+      {source = "module_agent_rc.lua", destination = "/etc/rc.d/module_agent.lua"}
     },
     archive = {
       {source = "station_log_collector.lua", destination = "/usr/lib/station_log_collector.lua"},
