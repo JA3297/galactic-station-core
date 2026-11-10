@@ -400,6 +400,53 @@ while true do
     local result, err = remote("info", {})
     if not result then print("ERROR: " .. tostring(err))
     else for k, v in pairs(result) do print(tostring(k) .. ": " .. tostring(v)) end end
+  elseif cmd == "hub" then
+    local raw = readFile("/var/galactic/status.dat")
+    if not raw then
+      print("Hub status not written yet; is gsd running?")
+    else
+      local ok, status = pcall(serialization.unserialize, raw)
+      if not ok or type(status) ~= "table" then
+        print("Hub status file is invalid.")
+      else
+        print("Witness owner: " .. tostring(status.witness and status.witness.owner or "NONE"))
+        print("Lease remaining: " .. tostring(status.witness and status.witness.lease_remaining or 0) .. "s")
+        print("Boot guard remaining: " .. tostring(status.witness and status.witness.boot_guard_remaining or 0) .. "s")
+        print("Registered nodes:")
+        for id, item in pairs(status.nodes or {}) do
+          print(string.format("  %-16s %-10s uptime %.0fs",
+            id, tostring(item.state or "UNKNOWN"), tonumber(item.uptime) or 0))
+        end
+      end
+    end
+  elseif cmd == "life" then
+    local previous = selected
+    selected = "GS-LIFE-01"
+    local chunks = {}
+    local ok, err = remoteRead("/var/galactic/logs/life_support_latest.dat",
+      function(chunk) chunks[#chunks + 1] = chunk end)
+    selected = previous
+    if not ok then
+      print("Life-support snapshot unavailable: " .. tostring(err))
+    else
+      local unpackOK, snapshot = pcall(serialization.unserialize, table.concat(chunks))
+      if not unpackOK or type(snapshot) ~= "table" then
+        print("Life-support snapshot could not be decoded.")
+      else
+        print("MAIN SERVICE | GS-LIFE-01 | uptime " .. tostring(snapshot.timestamp_uptime))
+        for _, item in ipairs(snapshot.equipment or {}) do
+          print(string.format("%-25s %-28s %s",
+            item.category, item.type, item.status))
+          for method, value in pairs(item.values or {}) do
+            print("  " .. tostring(method) .. " = " .. serialization.serialize(value))
+          end
+        end
+        print("Alarms: " .. tostring(#(snapshot.alarms or {})))
+        for _, alarm in ipairs(snapshot.alarms or {}) do
+          print("  " .. tostring(alarm.severity) .. " " .. tostring(alarm.code))
+        end
+      end
+    end
   elseif cmd == "pwd" then
     print(cwd)
   elseif cmd == "cd" then
