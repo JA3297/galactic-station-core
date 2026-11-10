@@ -361,7 +361,11 @@ local function updateNode(nodeId)
     addAll(manifest.roles and manifest.roles.witness)
   elseif info.kind == "module" then
     addAll(manifest.roles and manifest.roles.module)
-    if info.node_id == "MAIN-SERVICE-01" then addAll(manifest.roles and manifest.roles.main_service) end
+    if info.node_id == "MAIN-SERVICE-01" then
+      addAll(manifest.roles and manifest.roles.main_service)
+    else
+      addAll(manifest.roles and manifest.roles.module_agent)
+    end
   else
     print("No deployment profile for " .. tostring(info.kind))
     restoreSelection()
