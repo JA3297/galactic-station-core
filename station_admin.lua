@@ -211,6 +211,76 @@ local function remoteRead(path, onChunk)
   return true, size or offset
 end
 
+local function collectDiagnostics(nodeId, outputRoot)
+  local node = nodes[nodeId]
+  if not node then return false, "unknown node" end
+  local previousSelected = selected
+  selected = nodeId
+
+  outputRoot = outputRoot or ("/home/station-diagnostics/" .. nodeId)
+  filesystem.makeDirectory(outputRoot)
+
+  local files = {
+    {path = "/var/station/events.log", name = "events-last.txt", lines = 150},
+    {path = "/var/station/log-spool/active.log", name = "local-spool-last.txt", lines = 100},
+    {path = "/var/station/logs/station.log", name = "central-archive-last.txt", lines = 150}
+  }
+  local saved = 0
+
+  for _, item in ipairs(files) do
+    local result, err = remote("tail", {path = item.path, lines = item.lines}, 8)
+    if result and type(result.text) == "string" then
+      local path = outputRoot .. "/" .. item.name
+      local ok, writeErr = writeAll(path, result.text .. "\n")
+      if ok then
+        saved = saved + 1
+        print("Saved " .. path)
+      else
+        print("Local write failed for " .. path .. ": " .. tostring(writeErr))
+      end
+    else
+      print("Skipped " .. item.path .. ": " .. tostring(err))
+    end
+  end
+
+  local snapshotPath = "/var/station/main_service_snapshot.txt"
+  local stat = remote("stat", {path = snapshotPath}, 6)
+  if stat and stat.exists and not stat.directory and stat.size <= 262144 then
+    local chunks = {}
+    local ok, err = remoteRead(snapshotPath, function(chunk) chunks[#chunks + 1] = chunk end)
+    if ok then
+      local path = outputRoot .. "/main-service-snapshot.txt"
+      local writeOK, writeErr = writeAll(path, table.concat(chunks))
+      if writeOK then
+        saved = saved + 1
+        print("Saved " .. path)
+      else
+        print("Local write failed: " .. tostring(writeErr))
+      end
+    else
+      print("Snapshot download failed: " .. tostring(err))
+    end
+  end
+
+  local info = node.info or {}
+  local infoLines = {
+    "GALACTIC STATION DIAGNOSTIC EXPORT",
+    "Node: " .. tostring(nodeId),
+    "Kind: " .. tostring(info.kind),
+    "Role: " .. tostring(info.role),
+    "Pair: " .. tostring(info.pair_id),
+    "Agent version: " .. tostring(info.agent_version),
+    "Computer address: " .. tostring(info.computer_address),
+    "Collected from manager uptime: " .. tostring(computer.uptime())
+  }
+  local infoOK, infoErr = writeAll(outputRoot .. "/node-info.txt", table.concat(infoLines, "\n") .. "\n")
+  if infoOK then saved = saved + 1 else print("Could not save node info: " .. tostring(infoErr)) end
+
+  selected = previousSelected
+  print("Diagnostic export complete: " .. tostring(saved) .. " file(s) in " .. outputRoot)
+  return true, outputRoot
+end
+
 local function uploadData(remotePath, data)
   if #data > MAX_FILE then return false, "file exceeds 2 MiB transfer limit" end
   local transferId = "T" .. tostring(nextSequence()) .. "X" .. tostring(math.floor(computer.uptime() * 1000))
@@ -528,6 +598,13 @@ while true do
       updateNode(w[2])
     else
       print("Usage: update <node-id|all>")
+    end
+  elseif cmd == "collect" then
+    local target = w[2] or selected
+    if not target then
+      print("Usage: collect <node-id> (or select a node first)")
+    else
+      collectDiagnostics(target)
     end
   elseif cmd == "logs" then
     local count = math.max(1, math.min(200, tonumber(w[2]) or 50))
