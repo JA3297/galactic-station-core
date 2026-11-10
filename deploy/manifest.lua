@@ -4,13 +4,14 @@
 -- the selected host through authenticated modem management port 45822.
 
 return {
-  version = "3.0.0",
+  version = "3.0.1",
   repository = "JA3297/galactic-station-core",
   common = {
     {source = "admin_crypto.lua", destination = "/usr/lib/admin_crypto.lua"},
     {source = "remote_admin_agent.lua", destination = "/usr/lib/remote_admin_agent.lua"},
     {source = "remote_admin_rc.lua", destination = "/etc/rc.d/remote_admin.lua"},
-    {source = "station_logger.lua", destination = "/usr/lib/station_logger.lua"}
+    {source = "station_logger.lua", destination = "/usr/lib/station_logger.lua"},
+    {source = "remote_admin_diagnose.lua", destination = "/usr/bin/remote_admin_diagnose.lua"}
   },
   roles = {
     core = {
