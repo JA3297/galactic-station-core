@@ -479,6 +479,20 @@ while true do
         else print(tostring(k) .. ": " .. tostring(v)) end
       end
     else print(tostring(result)) end
+  elseif cmd == "reboot" then
+    local target, targetErr = getSelected()
+    if not target then
+      print("ERROR: " .. tostring(targetErr))
+    else
+      io.write("Type REBOOT " .. target .. " to confirm: ")
+      if io.read("*l") == "REBOOT " .. target then
+        local result, err = remote("reboot", {confirm = "REBOOT " .. target}, 8)
+        if result then print(target .. " accepted the reboot request.")
+        else print("REBOOT FAILED: " .. tostring(err)) end
+      else
+        print("Cancelled.")
+      end
+    end
   elseif cmd == "update" then
     if w[2] == "all" then
       local ids = {}
