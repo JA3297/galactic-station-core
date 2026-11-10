@@ -4,7 +4,7 @@
 -- transfers them to targets over the authenticated in-game modem network.
 
 return {
-  version = "2.0.0",
+  version = "2.1.0",
   repository = "JA3297/galactic-station-core",
   common = {
     {source = "admin_crypto.lua", destination = "/usr/lib/admin_crypto.lua"},
