@@ -478,14 +478,22 @@ local function handleMessage(_, localAddress, remoteAddress, port, distance, pay
   replay[request.client_id] = request.sequence
   saveReplay()
 
-  local result, err = perform(request.operation, request.args, request.client_id)
+  local operationOK, result, err = pcall(perform, request.operation, request.args, request.client_id)
+  if not operationOK then
+    err = "remote operation exception: " .. tostring(result)
+    result = nil
+  end
   local success = result ~= nil
   if success then
     audit("INFO", "remote operation " .. tostring(request.operation), request.client_id)
   else
     audit("WARNING", "remote operation denied/failed " .. tostring(request.operation), tostring(err))
   end
-  sendReply(localAddress, remoteAddress, request, success, result, err)
+  local replyOK, replyErr = pcall(sendReply, localAddress, remoteAddress, request, success, result, err)
+  if not replyOK then
+    audit("ERROR", "remote reply failed", tostring(replyErr))
+    return
+  end
   if success and request.operation == "reboot" then
     event.timer(0.25, function()
       computer.shutdown(true)
