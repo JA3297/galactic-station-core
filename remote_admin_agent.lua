@@ -15,9 +15,31 @@ local event = require("event")
 local filesystem = require("filesystem")
 local serialization = require("serialization")
 
+local STATUS_PATH = "/var/station/remote_admin_status.txt"
+pcall(filesystem.makeDirectory, "/var/station")
+local stats = {
+  state = "BOOTING", received = 0, bad_mac = 0, bad_packet = 0,
+  wrong_network = 0, wrong_target = 0, accepted = 0, replies = 0,
+  last_sender = "-", last_reason = "-"
+}
+local function writeStatus()
+  local file = io.open(STATUS_PATH, "w")
+  if not file then return end
+  file:write("GALACTIC STATION REMOTE ADMIN STATUS\\n")
+  for k, v in pairs(stats) do file:write(tostring(k) .. "=" .. tostring(v) .. "\\n") end
+  file:write("uptime=" .. tostring(computer.uptime()) .. "\\n")
+  file:close()
+end
+local function setStatus(state, reason)
+  stats.state = state
+  if reason then stats.last_reason = tostring(reason):gsub("[\\r\\n]", " "):sub(1, 180) end
+  writeStatus()
+end
+
 local okCrypto, crypto = pcall(require, "admin_crypto")
 if not okCrypto then
   print("[REMOTE ADMIN] crypto module unavailable: " .. tostring(crypto))
+  setStatus("FAILED", "crypto module unavailable: " .. tostring(crypto))
   return
 end
 
@@ -41,17 +63,20 @@ end
 local key = readAll(KEY_PATH)
 if not key then
   print("[REMOTE ADMIN] Missing " .. KEY_PATH .. "; agent remains disabled.")
+  setStatus("FAILED", "missing remote_admin.key")
   return
 end
 key = key:gsub("[\r\n]+$", "")
 if #key < 32 then
   print("[REMOTE ADMIN] Key must contain at least 32 characters; agent disabled.")
+  setStatus("FAILED", "key shorter than 32 characters")
   return
 end
 
 local selfTestOK = crypto.selfTest()
 if not selfTestOK then
   print("[REMOTE ADMIN] SHA-256/HMAC self-test FAILED; agent disabled.")
+  setStatus("FAILED", "cryptography self-test failed")
   return
 end
 
@@ -80,8 +105,14 @@ end
 
 if not nodeId or not networkId then
   print("[REMOTE ADMIN] Could not identify this computer. Check /etc/station configuration.")
+  setStatus("FAILED", "missing or invalid node/witness/module configuration")
   return
 end
+stats.node_id = nodeId
+stats.network_id = networkId
+stats.kind = kind
+stats.key_fingerprint = crypto.hex(crypto.sha256(key)):sub(1, 16)
+writeStatus()
 
 filesystem.makeDirectory("/var/station")
 local replay = {}
@@ -133,13 +164,20 @@ local function sendReply(localAddress, remoteAddress, request, ok, result, err)
     local good, proxy = pcall(component.proxy, localAddress)
     if good then modem = proxy end
   end
+  local sent = false
   if modem then
-    pcall(modem.send, remoteAddress, PORT, encoded)
+    local sendOK, sendResult = pcall(modem.send, remoteAddress, PORT, encoded)
+    sent = sendOK and sendResult == true
   else
     for _, candidate in ipairs(modems) do
-      pcall(candidate.send, remoteAddress, PORT, encoded)
+      local sendOK, sendResult = pcall(candidate.send, remoteAddress, PORT, encoded)
+      if sendOK and sendResult == true then sent = true end
     end
   end
+  if sent then stats.replies = stats.replies + 1 end
+  stats.last_sender = tostring(remoteAddress)
+  writeStatus()
+  return sent
 end
 
 local function canonicalPath(path)
@@ -440,21 +478,59 @@ local function perform(operation, args, clientId)
 end
 
 local function handleMessage(_, localAddress, remoteAddress, port, distance, payload)
-  if port ~= PORT or type(payload) ~= "string" or #payload > MAX_PACKET then return end
+  if port ~= PORT then return end
+  stats.received = stats.received + 1
+  stats.last_sender = tostring(remoteAddress)
+  if type(payload) ~= "string" or #payload > MAX_PACKET then
+    stats.bad_packet = stats.bad_packet + 1
+    stats.last_reason = "invalid payload type/size"
+    writeStatus()
+    return
+  end
   local okOuter, envelope = pcall(serialization.unserialize, payload)
-  if not okOuter or type(envelope) ~= "table" or type(envelope.body) ~= "string" or type(envelope.mac) ~= "string" then return end
-  if not crypto.equal(crypto.hmac(key, envelope.body), envelope.mac) then return end
+  if not okOuter or type(envelope) ~= "table" or type(envelope.body) ~= "string" or type(envelope.mac) ~= "string" then
+    stats.bad_packet = stats.bad_packet + 1
+    stats.last_reason = "outer serialization rejected"
+    writeStatus()
+    return
+  end
+  if not crypto.equal(crypto.hmac(key, envelope.body), envelope.mac) then
+    stats.bad_mac = stats.bad_mac + 1
+    stats.last_reason = "HMAC mismatch (shared key differs)"
+    writeStatus()
+    return
+  end
 
   local okBody, request = pcall(serialization.unserialize, envelope.body)
-  if not okBody or type(request) ~= "table" then return end
-  if request.protocol ~= PROTOCOL or request.network ~= networkId or request.kind ~= "request" then return end
+  if not okBody or type(request) ~= "table" then
+    stats.bad_packet = stats.bad_packet + 1
+    stats.last_reason = "inner serialization rejected"
+    writeStatus()
+    return
+  end
+  if request.protocol ~= PROTOCOL or request.network ~= networkId or request.kind ~= "request" then
+    stats.wrong_network = stats.wrong_network + 1
+    stats.last_reason = "protocol/network/kind mismatch"
+    writeStatus()
+    return
+  end
   if type(request.client_id) ~= "string" or #request.client_id < 4 or #request.client_id > 80 then return end
   if type(request.sequence) ~= "number" or request.sequence < 1 then return end
   if type(request.request_id) ~= "string" or #request.request_id > 100 then return end
-  if request.target ~= "*" and request.target ~= nodeId then return end
+  if request.target ~= "*" and request.target ~= nodeId then
+    stats.wrong_target = stats.wrong_target + 1
+    stats.last_reason = "request targeted to another node"
+    writeStatus()
+    return
+  end
   -- A broadcast is permitted only for discovery; destructive operations must
   -- always be addressed to exactly one node.
-  if request.target == "*" and request.operation ~= "discover" then return end
+  if request.target == "*" and request.operation ~= "discover" then
+    stats.bad_packet = stats.bad_packet + 1
+    stats.last_reason = "broadcast operation denied"
+    writeStatus()
+    return
+  end
 
   local now = computer.uptime()
   local lastAt = lastRequestAt[request.client_id] or -10
@@ -473,6 +549,9 @@ local function handleMessage(_, localAddress, remoteAddress, port, distance, pay
     return
   end
 
+  stats.accepted = stats.accepted + 1
+  stats.last_reason = "accepted " .. tostring(request.operation)
+  writeStatus()
   local operationOK, result, err = pcall(perform, request.operation, request.args, request.client_id)
   if not operationOK then
     err = "remote operation exception: " .. tostring(result)
@@ -499,9 +578,16 @@ end
 local listenerId = event.listen("modem_message", handleMessage)
 if not listenerId then
   print("[REMOTE ADMIN] Could not register modem_message listener.")
+  setStatus("FAILED", "could not register modem_message listener")
   return
 end
 
+-- Compatibility listener for older OpenComputers/OC forks that expose the
+-- modem signal under the legacy name "modem".
+local legacyListenerId = event.listen("modem", handleMessage)
+
+setStatus("READY", "listening on port " .. PORT ..
+  (legacyListenerId and " (modem_message + modem)" or " (modem_message)"))
 print("[REMOTE ADMIN] Agent " .. nodeId .. " ready on port " .. PORT ..
   " (authenticated; unencrypted; driver mode).")
 audit("INFO", "remote admin agent started", VERSION)
