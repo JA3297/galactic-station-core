@@ -4,7 +4,7 @@
 -- the selected host through authenticated modem management port 45822.
 
 return {
-  version = "3.0.2",
+  version = "3.0.3",
   repository = "JA3297/galactic-station-core",
   common = {
     {source = "admin_crypto.lua", destination = "/usr/lib/admin_crypto.lua"},
