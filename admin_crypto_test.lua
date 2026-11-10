@@ -5,7 +5,7 @@
 local crypto = require("admin_crypto")
 local ok, sha, mac = crypto.selfTest()
 
-print("Galactic Station cryptography self-test")
+print("Galactic Station pure-Lua cryptography self-test")
 print("SHA-256 vector: " .. tostring(sha))
 print("HMAC-SHA256 vector: " .. tostring(mac))
 
