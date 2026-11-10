@@ -592,6 +592,21 @@ local function tickHub()
       item.state = "STALE"
     end
   end
+  local status = {
+    node = nodeInfo(),
+    witness = {
+      owner = witnessOwner,
+      lease_remaining = math.max(0, witnessExpires - now),
+      boot_guard_remaining = math.max(0, BOOT_GUARD - (now - startedAt))
+    },
+    nodes = registry
+  }
+  local file = io.open("/var/galactic/status.dat", "wb")
+  if file then
+    local ok, encoded = pcall(serialization.serialize, status)
+    if ok then file:write(encoded) end
+    file:close()
+  end
 end
 
 local function tickCore()
