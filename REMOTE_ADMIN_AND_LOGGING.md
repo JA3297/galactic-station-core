@@ -101,9 +101,10 @@ The console also has a diagnostic export helper:
 
 ```text
 collect CORE-A4
+collect all
 ```
 
-It saves the node identity, recent local station events, local logger spool, recent central archive log, and (when present) a bounded Main Service snapshot to `/home/station-diagnostics/CORE-A4/` on the management computer. You can then inspect or transfer those files from the manager.
+`collect all` runs the same export for every node returned by the most recent `discover`. It saves the node identity, recent local station events, local logger spool, recent central archive log, and (when present) a bounded Main Service snapshot to `/home/station-diagnostics/CORE-A4/` on the management computer. You can then inspect or transfer those files from the manager.
 
 Export a full log to the management computer:
 
