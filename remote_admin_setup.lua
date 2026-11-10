@@ -42,10 +42,18 @@ fetch("station_logger.lua", "/usr/lib/station_logger.lua")
 
 local key = read("/etc/station/remote_admin.key")
 if key then key = key:gsub("[\r\n]+$", "") end
-if not key or #key < 64 then
+local keepExisting = key and #key >= 64
+if keepExisting then
   print("")
-  print("A shared 64+ character secret is required.")
-  print("Use the EXACT SAME secret on the admin console and every managed computer.")
+  print("A remote-admin key already exists on this computer.")
+  io.write("Keep the existing key? [Y/n]: ")
+  local answer = string.lower(io.read("*l") or "y")
+  keepExisting = answer ~= "n" and answer ~= "no"
+end
+
+if not keepExisting then
+  print("")
+  print("Enter the shared 64+ character secret used by the management computer.")
   io.write("Paste secret: ")
   local first = io.read("*l")
   io.write("Paste secret again: ")
@@ -59,7 +67,6 @@ if not key or #key < 64 then
 else
   print("Existing remote-admin key preserved.")
 end
-
 local config
 local ok, value = pcall(dofile, "/etc/station/node.lua")
 if ok and type(value) == "table" then config = value end
