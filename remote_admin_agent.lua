@@ -412,6 +412,9 @@ local function handleMessage(_, localAddress, remoteAddress, port, distance, pay
   if type(request.sequence) ~= "number" or request.sequence < 1 then return end
   if type(request.request_id) ~= "string" or #request.request_id > 100 then return end
   if request.target ~= "*" and request.target ~= nodeId then return end
+  -- A broadcast is permitted only for discovery; destructive operations must
+  -- always be addressed to exactly one node.
+  if request.target == "*" and request.operation ~= "discover" then return end
 
   local now = computer.uptime()
   local lastAt = lastRequestAt[request.client_id] or -10
