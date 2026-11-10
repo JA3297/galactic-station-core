@@ -5,7 +5,6 @@
 
 local internet = require("internet")
 local filesystem = require("filesystem")
-local component = require("component")
 
 local BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-core/main/"
 
@@ -88,15 +87,20 @@ elseif config and config.module_id then
   end
 end
 
-local rc = os.execute and true
 print("")
 print("Remote agent files installed.")
-print("Enable the service with:")
+print("Start and enable the agent now:")
+print("  rc remote_admin start")
 print("  rc remote_admin enable")
 if config and config.role == "archive" then
-  print("Also enable the archive collector with:")
+  print("Start and enable the archive collector:")
+  print("  rc station_log_collector start")
   print("  rc station_log_collector enable")
+elseif config and config.module_id == "MAIN-SERVICE-01" then
+  print("Start and enable the Main Service monitor:")
+  print("  rc main_service_monitor start")
+  print("  rc main_service_monitor enable")
 end
-print("Then reboot or run the service start command during commissioning.")
+print("Restart existing station/witness processes during a maintenance window to load the structured logger.")
 print("Network port: 45822 | Log port: 45823")
 print("HMAC authentication enabled; modem packets are not encrypted.")
