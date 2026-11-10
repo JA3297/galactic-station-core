@@ -1,3 +1,5 @@
+> **Superseded installation instructions:** For a new or rebuilt station, use [BLANK_SLATE_INSTALL.md](BLANK_SLATE_INSTALL.md) and the unified [station_bootstrap.lua](station_bootstrap.lua). This document is a technical reference for the management and logging architecture; do not use its older step-by-step installation sequence.
+>
 # Remote Administration, GitHub Deployment, and Central Logging
 
 ## What this adds
