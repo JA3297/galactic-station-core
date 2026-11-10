@@ -70,7 +70,8 @@ if not clientId:match("^[%w_-]+$") then error("Invalid /etc/station/admin_client
 local sequence = tonumber(readAll("/var/station/admin_client_seq")) or 0
 local function nextSequence()
   sequence = sequence + 1
-  writeAll("/var/station/admin_client_seq", tostring(sequence))
+  local ok, err = writeAll("/var/station/admin_client_seq", tostring(sequence))
+  if not ok then error("Cannot persist admin request sequence: " .. tostring(err)) end
   return sequence
 end
 
@@ -201,7 +202,10 @@ local function remoteRead(path, onChunk)
   repeat
     local result, err = remote("read", {path = path, offset = offset, limit = CHUNK_SIZE}, 8)
     if not result then return false, err end
-    if size == nil then size = result.size end
+    if size == nil then
+      size = result.size
+      if size and size > MAX_FILE then return false, "remote file exceeds 2 MiB transfer limit" end
+    end
     if type(result.data) ~= "string" then return false, "invalid read response" end
     if onChunk then onChunk(result.data) end
     offset = offset + #result.data
@@ -300,7 +304,8 @@ local function uploadData(remotePath, data)
 end
 
 local function downloadRaw(url)
-  local internet = require("internet")
+  local loaded, internet = pcall(require, "internet")
+  if not loaded then return nil, "Internet Card library unavailable: " .. tostring(internet) end
   local ok, handle = pcall(internet.request, url)
   if not ok or not handle then return nil, tostring(handle or "HTTP request failed") end
   local pieces, size = {}, 0
