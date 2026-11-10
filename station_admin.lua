@@ -62,7 +62,8 @@ filesystem.makeDirectory("/var/station")
 local clientId = readAll("/etc/station/admin_client_id")
 if not clientId then
   clientId = "ADMIN-" .. computer.address():sub(1, 20)
-  writeAll("/etc/station/admin_client_id", clientId)
+  local saved, saveErr = writeAll("/etc/station/admin_client_id", clientId)
+  if not saved then error("Cannot persist admin client ID: " .. tostring(saveErr)) end
 end
 clientId = clientId:gsub("[\r\n]+$", "")
 if not clientId:match("^[%w_-]+$") then error("Invalid /etc/station/admin_client_id.") end
