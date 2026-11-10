@@ -68,6 +68,17 @@ if config and config.role == "archive" and config.pair_id == "PAIR-DATA" then
   fetch("station_log_collector.lua", "/usr/lib/station_log_collector.lua")
   fetch("station_log_collector_rc.lua", "/etc/rc.d/station_log_collector.lua")
   print("Archive log collector installed for " .. tostring(config.node_id))
+elseif config and config.module_id then
+  fetch("station_api.lua", "/usr/lib/station_api.lua")
+  if config.module_id == "MAIN-SERVICE-01" then
+    fetch("main_service_monitor.lua", "/usr/bin/main_service_monitor.lua")
+    fetch("main_service_monitor_rc.lua", "/etc/rc.d/main_service_monitor.lua")
+    print("Main Service life-support monitor installed.")
+    print("Do not run module_agent simultaneously with the Main Service monitor.")
+  else
+    fetch("module_agent.lua", "/usr/bin/module_agent.lua")
+    print("Optional module_agent installed; enable only if no other local program pulls modem events.")
+  end
 end
 
 local rc = os.execute and true
