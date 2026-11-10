@@ -21,6 +21,15 @@ local CHUNK_SIZE = 2000
 local MAX_FILE = 2097152
 local REPO_BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-core/main/"
 local MANIFEST_URL = REPO_BASE .. "deploy/manifest.lua"
+local NETWORK_ID = "GALACTIC-STATION-01"
+
+for _, configPath in ipairs({"/etc/station/node.lua", "/etc/station/module.lua", "/etc/station/witness.lua"}) do
+  local ok, cfg = pcall(dofile, configPath)
+  if ok and type(cfg) == "table" and type(cfg.network_id) == "string" then
+    NETWORK_ID = cfg.network_id
+    break
+  end
+end
 
 local function readAll(path)
   local f = io.open(path, "rb")
@@ -90,7 +99,7 @@ local function onMessage(_, localAddress, remoteAddress, port, distance, payload
   if not crypto.equal(crypto.hmac(key, envelope.body), envelope.mac) then return end
   local bodyOK, body = pcall(serialization.unserialize, envelope.body)
   if not bodyOK or type(body) ~= "table" or body.protocol ~= PROTOCOL or
-     body.network == nil or body.kind ~= "reply" or body.client_id ~= clientId then return end
+     body.network ~= NETWORK_ID or body.kind ~= "reply" or body.client_id ~= clientId then return end
   local list = inbox[body.request_id] or {}
   list[#list + 1] = {body = body, address = remoteAddress, local_address = localAddress}
   inbox[body.request_id] = list
@@ -103,7 +112,7 @@ local function sendRequest(target, operation, args, timeout, collectAll)
   local seq = nextSequence()
   local requestId = clientId .. "-" .. tostring(seq)
   local body = {
-    protocol = PROTOCOL, network = "GALACTIC-STATION-01",
+    protocol = PROTOCOL, network = NETWORK_ID,
     kind = "request", client_id = clientId, sequence = seq,
     request_id = requestId, target = target or "*",
     operation = operation, args = args or {}
