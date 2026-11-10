@@ -162,7 +162,7 @@ Intentionally left as extension points:
 - Detailed utility/power dispatch algorithms and scheduling policy.
 - External communications gateway integration.
 - A graphical multi-screen crew interface.
-- Software/configuration package distribution and rollback.
+- Role-aware GitHub staging over the authenticated management plane is now implemented in the optional remote-admin overlay. Per-file backups are retained as `.gsa-backup`; coordinated package rollback and automatic rolling restarts remain future work.
 - Hardware-specific redstone, adapter, Galacticraft, or other mod integration.
 - Cryptographic operator authentication and multi-witness quorum consensus.
 
