@@ -59,6 +59,13 @@ end
 ensureDir("/var/station")
 ensureDir("/etc/station")
 
+-- Optional structured logger. Core supervision continues if the logger/key is absent.
+local stationLogger
+do
+  local loggerOK, loggerValue = pcall(require, "station_logger")
+  if loggerOK then stationLogger = loggerValue end
+end
+
 local function readTable(path, default)
   local file = io.open(path, "r")
   if not file then return default end
@@ -155,6 +162,21 @@ local function appendLog(kind, source, details)
   if file then file:write(line); file:close() end
   table.insert(state.events, {at = now(), kind = kind, source = source, details = details})
   while #state.events > 100 do table.remove(state.events, 1) end
+
+  if stationLogger and stationLogger.write then
+    local lowerKind = string.lower(tostring(kind))
+    local level = "INFO"
+    if lowerKind:find("error", 1, true) or lowerKind:find("failed", 1, true) then
+      level = "ERROR"
+    elseif lowerKind:find("reject", 1, true) or lowerKind:find("expire", 1, true) or
+           lowerKind:find("denied", 1, true) then
+      level = "WARNING"
+    elseif lowerKind == "telemetry" then
+      level = "DEBUG"
+    end
+    pcall(stationLogger.write, level, "station." .. tostring(kind),
+      tostring(source) .. " | " .. tostring(details or ""))
+  end
 end
 
 local function transmit(kind, data)
