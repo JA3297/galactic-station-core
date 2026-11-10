@@ -405,15 +405,31 @@ while true do
   elseif cmd == "ls" then
     local path = w[2] or cwd
     if path:sub(1,1) ~= "/" then path = (cwd == "/" and "" or cwd) .. "/" .. path end
-    local result, err = remote("list", {path = path})
-    if not result then print("ERROR: " .. tostring(err))
-    else
-      print("Directory: " .. result.path)
-      for _, entry in ipairs(result.entries or {}) do
-        local name = tostring(entry.name):gsub("/+$","")
-        print(string.format("%-38s %s", name, entry.directory and "<DIR>" or tostring(entry.size)))
+    local offset, finished = 0, false
+    local firstPage = true
+    while not finished do
+      local result, err = remote("list", {path = path, offset = offset, limit = 24})
+      if not result then
+        print("ERROR: " .. tostring(err))
+        finished = true
+      else
+        if firstPage then
+          print("Directory: " .. result.path .. " (" .. tostring(result.total) .. " entries)")
+          firstPage = false
+        end
+        for _, entry in ipairs(result.entries or {}) do
+          local name = tostring(entry.name):gsub("/+$","")
+          print(string.format("%-38s %s", name, entry.directory and "<DIR>" or tostring(entry.size)))
+        end
+        if result.next_offset then
+          offset = result.next_offset
+        else
+          finished = true
+        end
+        if result.truncated and not result.next_offset then
+          print("[listing truncated at remote scan limit]")
+        end
       end
-      if result.truncated then print("[listing truncated at 100 entries]") end
     end
   elseif cmd == "cat" then
     if not w[2] then print("Usage: cat /path/to/file")
