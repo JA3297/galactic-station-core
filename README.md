@@ -1,3 +1,5 @@
+> **Current management expansion:** authenticated remote administration, GitHub-driven deployment, and mirrored log collection are documented in [REMOTE_ADMIN_AND_LOGGING.md](REMOTE_ADMIN_AND_LOGGING.md). This is a management overlay on the existing station network, not an SSH implementation: it provides HMAC-authenticated modem messaging, a restricted remote command set, file transfer, staged updates, and mirrored archives. The management traffic is not encrypted.
+
 # Galactic Station Core — OpenComputers
 
 A starter supervisory-computing package for a Galacticraft/OpenComputers station. It runs the 16 service-module core computers as eight redundant pairs, plus one independent cluster witness. All sixteen core computers use the same runtime and receive different configuration files.
@@ -70,6 +72,26 @@ rc witness enable
 ```
 
 Reboot and verify the processes. The `rc` wrappers run the long-lived programs in detached OpenOS threads. For initial commissioning, start the programs manually so startup errors are visible.
+
+
+## Remote administration and centralized logging
+
+The repository now includes an optional management plane:
+
+- `station_admin.lua` — interactive management console for discovery, node selection, remote directory listing, file reads/downloads/uploads, directory creation, rename/delete, safe diagnostics, confirmed reboot, GitHub staging, and log tailing.
+- `remote_admin_agent.lua` and `remote_admin_rc.lua` — per-computer authenticated remote filesystem/diagnostic agent.
+- `admin_crypto.lua` — Lua SHA-256/HMAC-SHA256 implementation and self-test.
+- `remote_admin_setup.lua` — one-time bootstrap for managed computers.
+- `deploy/manifest.lua` — role-aware source-to-destination manifest used by the management console's GitHub update command.
+- `station_logger.lua` — local rotating spool and authenticated log broadcaster.
+- `station_log_collector.lua` — independent log collectors for CORE-A4 and CORE-B4.
+- `REMOTE_ADMIN_AND_LOGGING.md` — complete setup, operation, security caveats, and test plan.
+
+Management and log traffic use ports 45822 and 45823, separate from the existing station protocol on 45821. The management plane uses a shared secret kept only in each computer's `/etc/station/remote_admin.key`; never commit this file or paste it into public logs. HMAC authenticates and protects message integrity, but does not encrypt packets. Keep the modem network trusted. The remote command set is intentionally allow-listed rather than arbitrary remote shell/Lua execution.
+
+CORE-A4 and CORE-B4 each maintain an independent copy of received logs. This is application-level mirrored storage, **not hardware RAID**. The manager can retrieve logs with `logs` or `get`; it does not automatically publish operational logs to this public repository.
+
+See [REMOTE_ADMIN_AND_LOGGING.md](REMOTE_ADMIN_AND_LOGGING.md) before enabling this feature on the full station. Start with two test nodes, verify key consistency, discovery, read/write transfers, and mirrored logs, then roll out gradually.
 
 ## Module-local integration
 
