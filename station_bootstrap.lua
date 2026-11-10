@@ -128,6 +128,7 @@ local function installCommon()
   installRemote("remote_admin_agent.lua", "/usr/lib/remote_admin_agent.lua")
   installRemote("remote_admin_rc.lua", "/etc/rc.d/remote_admin.lua")
   installRemote("station_logger.lua", "/usr/lib/station_logger.lua")
+  installRemote("remote_admin_diagnose.lua", "/usr/bin/remote_admin_diagnose.lua")
 end
 
 local function configureKey()
@@ -226,6 +227,7 @@ local function installManagement()
   ensureDirectory("/var/station")
   installRemote("admin_crypto.lua", "/usr/lib/admin_crypto.lua")
   installRemote("admin_crypto_test.lua", "/usr/bin/admin_crypto_test.lua")
+  installRemote("remote_admin_diagnose.lua", "/usr/bin/remote_admin_diagnose.lua")
   installRemote("station_admin.lua", "/usr/bin/station_admin.lua")
   installRemote("admin_key_setup.lua", "/usr/bin/admin_key_setup.lua")
 
@@ -243,6 +245,7 @@ end
 local function offerManagementConsole()
   if yesNo("Also install the management console on this computer", false) then
     installRemote("admin_crypto_test.lua", "/usr/bin/admin_crypto_test.lua")
+    installRemote("remote_admin_diagnose.lua", "/usr/bin/remote_admin_diagnose.lua")
     installRemote("station_admin.lua", "/usr/bin/station_admin.lua")
     installRemote("admin_key_setup.lua", "/usr/bin/admin_key_setup.lua")
   end
