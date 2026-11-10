@@ -191,29 +191,44 @@ local function protectedDelete(path)
     path == "/boot" or path == "/lib" or path == "/var" or path == "/home"
 end
 
-local function safeList(path)
+local function safeList(path, offset, limit)
   if not filesystem.exists(path) then return nil, "directory does not exist" end
   if not filesystem.isDirectory(path) then return nil, "path is not a directory" end
   local iterator, err = filesystem.list(path)
   if not iterator then return nil, tostring(err or "cannot list directory") end
-  local entries, count = {}, 0
+
+  offset = math.max(0, math.floor(tonumber(offset) or 0))
+  limit = math.max(1, math.min(30, math.floor(tonumber(limit) or 24)))
+  local all, scanned = {}, 0
   for name in iterator do
-    count = count + 1
-    if count > 100 then break end
+    scanned = scanned + 1
+    if scanned > 500 then break end
+    all[#all + 1] = tostring(name)
+  end
+  table.sort(all)
+
+  local entries = {}
+  local first = offset + 1
+  local last = math.min(#all, offset + limit)
+  for i = first, last do
+    local name = all[i]
+    local shortName = #name > 96 and name:sub(1, 93) .. "..." or name
     local full
     if name:sub(1,1) == "/" then full = name
     else full = (path == "/" and "/" or path .. "/") .. name end
     local isDir = filesystem.isDirectory(full)
     entries[#entries + 1] = {
-      name = name, directory = isDir,
+      name = shortName, directory = isDir,
       size = isDir and 0 or filesystem.size(full),
       modified = filesystem.lastModified(full)
     }
   end
-  table.sort(entries, function(a,b) return tostring(a.name) < tostring(b.name) end)
-  return {path = path, entries = entries, truncated = count > 100}
+  return {
+    path = path, entries = entries, offset = offset, total = #all,
+    truncated = #all > offset + limit or scanned > 500,
+    next_offset = (#all > offset + limit) and (offset + limit) or nil
+  }
 end
-
 local function getInfo()
   local modemCount, componentCount = 0, 0
   for address, typeName in component.list() do
@@ -269,7 +284,7 @@ local function perform(operation, args, clientId)
   elseif operation == "list" then
     local path, err = canonicalPath(args.path or "/")
     if not path then return nil, err end
-    return safeList(path)
+    return safeList(path, args.offset, args.limit)
 
   elseif operation == "stat" then
     local path, err = canonicalPath(args.path)
@@ -320,8 +335,12 @@ local function perform(operation, args, clientId)
     local output = {}
     local first = math.max(1, #lines - lineCount + 1)
     for i = first, #lines do output[#output + 1] = lines[i] end
-    return {path = path, lines = #output, text = table.concat(output, "\n"), truncated = start > 0}
-
+    local text = table.concat(output, "\n")
+    local byteLimit = 2600
+    local clipped = #text > byteLimit
+    if clipped then text = text:sub(#text - byteLimit + 1) end
+    return {path = path, lines = #output, text = text,
+      truncated = start > 0 or clipped, clipped = clipped}
   elseif operation == "write_chunk" then
     local path, err = canonicalPath(args.path)
     if not path then return nil, err end
