@@ -31,11 +31,13 @@ filesystem.makeDirectory("/usr/lib")
 filesystem.makeDirectory("/var/station")
 
 fetch("admin_crypto.lua", "/usr/lib/admin_crypto.lua")
+fetch("admin_crypto_test.lua", "/usr/bin/admin_crypto_test.lua")
 fetch("station_admin.lua", "/usr/bin/station_admin.lua")
 fetch("admin_key_setup.lua", "/usr/bin/admin_key_setup.lua")
 
 print("")
 print("Management console files installed.")
+print("Verify cryptography first with: lua /usr/bin/admin_crypto_test.lua")
 print("Next: create /etc/station/remote_admin.key, then install the same key")
 print("and remote_admin_agent service on each managed computer.")
 print("Launch the console with: lua /usr/bin/station_admin.lua")
