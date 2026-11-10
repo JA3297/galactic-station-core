@@ -14,7 +14,6 @@ local function recordStartup(message)
     file:close()
   end
 end
-
 function start()
   local thread = require("thread")
   thread.create(function()
