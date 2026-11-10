@@ -14,7 +14,7 @@ The remote agent uses OpenOS `event.listen("modem_message", ...)` driver mode. I
 
 ## Security model and limitations
 
-- Messages on ports 45822 and 45823 are authenticated with HMAC-SHA256 using a shared secret stored at `/etc/station/remote_admin.key`.
+- Messages on ports 45822 and 45823 are authenticated with HMAC-SHA256 using a shared secret stored at `/etc/station/remote_admin.key`. The repository's `admin_crypto.lua` uses a pure-Lua arithmetic implementation and does not require the runtime to provide `bit32`.
 - The secret is never stored in this public repository or included in the deployment manifest.
 - Each client has a monotonically increasing request sequence. Agents persist the last accepted sequence per client to reject replays.
 - Broadcast requests are restricted to discovery. File writes, deletes, moves, and reboots must target one named computer.
