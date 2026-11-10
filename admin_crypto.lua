@@ -60,7 +60,8 @@ end
 local function fold(operation, initial, ...)
   local result = initial
   for i = 1, select("#", ...) do
-    result = bitop2(result, select(i, ...), operation)
+    local operand = select(i, ...)
+    result = bitop2(result, operand, operation)
   end
   return result
 end
