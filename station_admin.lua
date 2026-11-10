@@ -505,9 +505,15 @@ while true do
       print("Usage: update <node-id|all>")
     end
   elseif cmd == "logs" then
-    local path = w[2] or "/var/station/logs/station.log"
-    local ok, err = remoteRead(path, function(chunk) io.write(chunk) end)
-    if not ok then print("ERROR: " .. tostring(err)) else print("") end
+    local count = math.max(1, math.min(200, tonumber(w[2]) or 50))
+    local result, err = remote("tail", {path = "/var/station/logs/station.log", lines = count}, 8)
+    if not result then
+      print("ERROR: " .. tostring(err))
+    else
+      print("Log: " .. result.path .. " | last " .. tostring(result.lines) .. " lines")
+      if result.truncated then print("[older part of file omitted]") end
+      print(result.text or "")
+    end
   else
     print("Unknown command. Type help.")
   end
