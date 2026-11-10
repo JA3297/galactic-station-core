@@ -25,9 +25,11 @@ local stats = {
 local function writeStatus()
   local file = io.open(STATUS_PATH, "w")
   if not file then return end
-  file:write("GALACTIC STATION REMOTE ADMIN STATUS\\n")
-  for k, v in pairs(stats) do file:write(tostring(k) .. "=" .. tostring(v) .. "\\n") end
-  file:write("uptime=" .. tostring(computer.uptime()) .. "\\n")
+  file:write("GALACTIC STATION REMOTE ADMIN STATUS\n")
+  for k, v in pairs(stats) do
+    file:write(tostring(k) .. "=" .. tostring(v) .. "\n")
+  end
+  file:write("uptime=" .. tostring(computer.uptime()) .. "\n")
   file:close()
 end
 local function setStatus(state, reason)
