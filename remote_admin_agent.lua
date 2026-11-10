@@ -296,6 +296,32 @@ local function perform(operation, args, clientId)
     f:close()
     return {path = path, offset = offset, size = size, data = data, eof = offset + #data >= size}
 
+  elseif operation == "tail" then
+    local path, err = canonicalPath(args.path)
+    if not path then return nil, err end
+    if protectedPath(path) then return nil, "protected file" end
+    if not filesystem.exists(path) or filesystem.isDirectory(path) then return nil, "file not found" end
+    local lineCount = math.max(1, math.min(200, math.floor(tonumber(args.lines) or 50)))
+    local size = filesystem.size(path)
+    local f, openErr = io.open(path, "rb")
+    if not f then return nil, tostring(openErr) end
+    local start = math.max(0, size - 65536)
+    f:seek("set", start)
+    local data = f:read("*a") or ""
+    f:close()
+    if start > 0 then
+      local firstNewline = data:find("\\n", 1, true)
+      if firstNewline then data = data:sub(firstNewline + 1) end
+    end
+    local lines = {}
+    for line in data:gmatch("[^\\r\\n]+") do
+      lines[#lines + 1] = line
+    end
+    local output = {}
+    local first = math.max(1, #lines - lineCount + 1)
+    for i = first, #lines do output[#output + 1] = lines[i] end
+    return {path = path, lines = #output, text = table.concat(output, "\\n"), truncated = start > 0}
+
   elseif operation == "write_chunk" then
     local path, err = canonicalPath(args.path)
     if not path then return nil, err end
