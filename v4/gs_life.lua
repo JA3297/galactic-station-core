@@ -55,7 +55,8 @@ local function sanitize(value, depth)
   for k, v in pairs(value) do
     count = count + 1
     if count > 16 then break end
-    local key = type(k) == "string" or type(k) == "number" and k or tostring(k)
+    local key = k
+    if type(key) ~= "string" and type(key) ~= "number" then key = tostring(key) end
     if key then result[key] = sanitize(v, depth + 1) end
   end
   return result
