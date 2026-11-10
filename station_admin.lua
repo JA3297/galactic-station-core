@@ -23,7 +23,7 @@ local REPO_BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-cor
 local MANIFEST_URL = REPO_BASE .. "deploy/manifest.lua"
 local NETWORK_ID = "GALACTIC-STATION-01"
 
-for _, configPath in ipairs({"/etc/station/node.lua", "/etc/station/module.lua", "/etc/station/witness.lua"}) do
+for _, configPath in ipairs({"/etc/station/admin.lua", "/etc/station/node.lua", "/etc/station/module.lua", "/etc/station/witness.lua"}) do
   local ok, cfg = pcall(dofile, configPath)
   if ok and type(cfg) == "table" and type(cfg.network_id) == "string" then
     NETWORK_ID = cfg.network_id
