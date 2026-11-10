@@ -85,7 +85,7 @@ All managed computers can use `/usr/lib/station_logger.lua`:
 - the archive log rotates at 512 KiB with four old rotations;
 - duplicate packets are suppressed using record IDs.
 
-The current integration sends station core events, witness lease grants/expirations, remote-admin audit records, and Main Service monitor start/getter-warning changes. It does not capture every arbitrary `print()` written by every Lua program.
+The current integration sends station core events, witness lease grants/expirations, remote-admin audit records, module-agent command/alarm visibility, and Main Service monitor start/getter-warning changes. It does not capture every arbitrary `print()` written by every Lua program.
 
 **This is an application-level mirrored archive, not RAID.** CORE-A4 and CORE-B4 each store a copy on their own local filesystem. That protects against losing one archive computer, but it is not a hardware RAID array and does not guarantee the two copies are always perfectly synchronized during a power/network failure.
 
@@ -122,7 +122,15 @@ wget -f https://raw.githubusercontent.com/JA3297/galactic-station-core/main/stat
 lua /tmp/station_admin_install.lua
 ```
 
-This installs `/usr/lib/admin_crypto.lua`, `/usr/bin/station_admin.lua`, and the local key setup utility.
+This installs `/usr/lib/admin_crypto.lua`, `/usr/bin/station_admin.lua`, the key setup utility, and a cryptography self-test.
+
+Run the self-test before provisioning a key:
+
+```sh
+lua /usr/bin/admin_crypto_test.lua
+```
+
+Proceed only if it reports that all cryptography tests passed.
 
 ### 3. Create one high-entropy shared secret
 
