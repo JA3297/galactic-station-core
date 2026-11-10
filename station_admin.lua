@@ -17,7 +17,7 @@ local crypto = require("admin_crypto")
 
 local PORT = 45822
 local PROTOCOL = 1
-local CHUNK_SIZE = 2000
+local CHUNK_SIZE = 1000
 local MAX_FILE = 2097152
 local REPO_BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-core/main/"
 local MANIFEST_URL = REPO_BASE .. "deploy/manifest.lua"
