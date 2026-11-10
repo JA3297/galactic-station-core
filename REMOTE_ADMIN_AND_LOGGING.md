@@ -22,7 +22,8 @@ The remote agent uses OpenOS `event.listen("modem_message", ...)` driver mode. I
 - File reads/writes are remote administration operations. The key and node identity files are protected from remote read/write/delete. Critical filesystem roots cannot be deleted.
 - Remote deletion requires a local console confirmation. Remote reboot requires typing the exact node-specific phrase.
 - **This is not full SSH.** HMAC protects authenticity and integrity, but modem packets are not encrypted. A person able to sniff the in-game network may be able to read file-transfer contents. Keep the modem network physically/logically trusted and do not bridge it to untrusted players.
-- One shared key authorizes every machine using it. Anyone who obtains it has the same remote-admin rights. Rotate it on every host if it is exposed.
+- This first release uses one shared key on the manager and every managed host to keep 17-computer provisioning manageable. Consequently, **compromise of any one managed computer exposes the key used to administer every other computer**. Anyone who can read the key on a host can impersonate the manager. Do not enable this on a station where untrusted players can open terminals or read host files. Rotate the secret on every host if it is exposed.
+- This is a trusted-network v1, not full SSH: it has no packet encryption, per-node credentials, or public-key identity. A later hardened release should replace the shared key with per-host keys or manager-only digital signatures before exposing it to a wider multiplayer environment.
 - Remote admin is for trusted in-game administration, not a hardened security boundary against server operators or malicious modpack code.
 
 ## Remote console commands
