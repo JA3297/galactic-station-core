@@ -96,6 +96,8 @@ local function saveSequences()
   return true
 end
 
+local send
+
 local function log(level, source, message, fields)
   local record = {
     uptime = computer.uptime(),
@@ -116,6 +118,13 @@ local function log(level, source, message, fields)
     f:write(serialization.serialize(record), "\n")
     f:close()
   end
+  if cfg.role ~= "hub" and send then
+    pcall(send, nil, {
+      kind = "log_record", target = cfg.manager_id,
+      level = record.level, source = record.source,
+      message = record.message, fields = record.fields
+    })
+  end
 end
 
 local function pack(message)
@@ -127,7 +136,7 @@ local function pack(message)
   return crypto.seal(stationKey, serialization.serialize(message))
 end
 
-local function send(remoteAddress, message, localAddress)
+send = function(remoteAddress, message, localAddress)
   local payload, err = pack(message)
   if not payload then log("ERROR", "network", "packet encryption failed", {error = err}); return false end
   local sent = false
@@ -632,9 +641,6 @@ local function tickLife()
         send(nil, {kind = "life_snapshot", target = cfg.manager_id, snapshot = snapshot})
         for _, alarm in ipairs(snapshot.alarms or {}) do
           log(alarm.severity, "life_support", alarm.code, alarm)
-          send(nil, {kind = "log_record", target = cfg.manager_id,
-            level = alarm.severity, source = "life_support",
-            message = alarm.code, fields = alarm})
         end
         local file = io.open("/var/galactic/logs/life_support_latest.dat", "wb")
         if file then file:write(serialization.serialize(snapshot)); file:close() end
