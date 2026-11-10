@@ -1,5 +1,5 @@
 -- Galactic Station remote-management bootstrap installer.
--- Run once on EACH managed computer, and on the central admin computer.
+-- Run once on EACH managed computer. Run on the admin computer only if it is also a managed station node.
 -- Requires an Internet Card for this initial bootstrap.
 -- The shared secret is entered locally and is never downloaded from GitHub.
 
