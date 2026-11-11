@@ -1,4 +1,4 @@
-> **Life-support daemon fix (v4.0.3):** Corrected a local-variable declaration-order bug in `gsd.lua` that caused the `life_support` role to crash on its first sampling tick. On an already-installed GS-LIFE-01, update only `/usr/bin/gsd.lua` and restart `gs`; no reinstallation or key changes are required.
+> **Life-support daemon fix (v4.0.4):** Corrected a local-variable declaration-order bug in `gsd.lua` that caused the `life_support` role to crash on its first sampling tick. A second safeguard catches later sampling exceptions and keeps the daemon heartbeat alive. On an already-installed GS-LIFE-01, update only `/usr/bin/gsd.lua` and restart `gs`; no reinstallation or key changes are required.
 >
 # Galactic Station v4 — Fresh Installation
 
