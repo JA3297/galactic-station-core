@@ -107,7 +107,7 @@ state.counters = state.counters or {packets = 0, malformed = 0, commands = 0, al
 if CFG.side == "B" then
   local replica = readTable("/var/station/replica.dat", nil)
   if replica then
-    for _, key in ipairs({"telemetry", "nodes", "alarms", "resources", "events", "counters"}) do
+    for _, key in ipairs({"telemetry", "nodes", "alarms", "resources", "events", "counters", "equipment"}) do
       if type(replica[key]) == "table" then state[key] = replica[key] end
     end
   end
@@ -240,7 +240,8 @@ local function snapshot()
   for i = 1, math.min(40, #ordered) do telemetry[ordered[i].key] = ordered[i].value end
   return {
     telemetry = telemetry, nodes = state.nodes, alarms = state.alarms,
-    resources = state.resources, events = events, counters = state.counters
+    resources = state.resources, events = events, counters = state.counters,
+    equipment = state.equipment
   }
 end
 
