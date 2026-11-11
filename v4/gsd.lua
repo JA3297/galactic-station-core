@@ -631,6 +631,10 @@ local function tickCore()
   end
 end
 
+-- Must be declared before tickLife so the function closes over this
+-- local rather than resolving a nonexistent global at runtime.
+local lastLifeSample = 0
+
 local function tickLife()
   local now = computer.uptime()
   if now - lastLifeSample >= LIFE_INTERVAL then
@@ -656,7 +660,6 @@ end
 
 local lastLeaseRequest = 0
 local lastHeartbeat = 0
-local lastLifeSample = 0
 local lastHubTick = 0
 
 log("INFO", "gsd", "Galactic Station v4 daemon started", {role = cfg.role, version = "4.0.0"})
