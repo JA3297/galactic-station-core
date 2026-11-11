@@ -51,6 +51,46 @@ local function readFile(path)
   return data
 end
 
+local LOG_PATH = "/var/galactic/logs/gs.log"
+local LOG_LIMIT = 524288
+
+local function appendHubLogRecord(message)
+  local record = {
+    uptime = tonumber(message.uptime) or computer.uptime(),
+    node = tostring(message.sender or message.node or "unknown"),
+    level = tostring(message.level or "INFO"),
+    source = tostring(message.source or "remote"),
+    message = tostring(message.message or ""):gsub("[\r\n\0]", " "):sub(1, 900),
+    fields = type(message.fields) == "table" and message.fields or nil
+  }
+
+  filesystem.makeDirectory("/var/galactic/logs")
+  if filesystem.exists(LOG_PATH) and filesystem.size(LOG_PATH) >= LOG_LIMIT then
+    os.remove(LOG_PATH .. ".2")
+    if filesystem.exists(LOG_PATH .. ".1") then
+      os.rename(LOG_PATH .. ".1", LOG_PATH .. ".2")
+    end
+    os.rename(LOG_PATH, LOG_PATH .. ".1")
+  end
+
+  local file, err = io.open(LOG_PATH, "a")
+  if not file then return false, tostring(err) end
+  local ok, writeErr = pcall(function()
+    assert(file:write(serialization.serialize(record), "\n"))
+    assert(file:flush())
+  end)
+  local closeOK = pcall(file.close, file)
+  if not ok or not closeOK then
+    return false, tostring(writeErr or "log close failed")
+  end
+  return true
+end
+
+local function fileContains(path, needle)
+  local data = readFile(path)
+  return data ~= nil and data:find(needle, 1, true) ~= nil
+end
+
 local function writeFile(path, data)
   local parent = filesystem.path(path)
   if parent then filesystem.makeDirectory(parent) end
