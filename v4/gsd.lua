@@ -692,7 +692,15 @@ while true do
     lastHeartbeat = now
   end
 
-  if cfg.role == "life_support" then tickLife() end
+  if cfg.role == "life_support" then
+    local lifeOK, lifeErr = pcall(tickLife)
+    if not lifeOK then
+      log("ERROR", "life_support", "life sampling tick failed", {error = tostring(lifeErr)})
+      -- Avoid a tight error loop while allowing core heartbeats and the
+      -- management daemon to continue operating.
+      lastLifeSample = now
+    end
+  end
 
   if cfg.role == "hub" and now - lastHubTick >= 2 then
     tickHub()
