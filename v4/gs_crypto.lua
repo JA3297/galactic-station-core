@@ -98,7 +98,7 @@ function M.seal(secretHex, plaintext)
   if type(plaintext) ~= "string" then return nil, "plaintext must be a string" end
 
   local iv = dataCall("random", 16)
-  local encryptedOK, cipher = pcall(data.encrypt, plaintext, aesKey(secret), iv)
+  local encryptedOK, cipher = pcall(dataCall, "encrypt", plaintext, aesKey(secret), iv)
   if not encryptedOK or type(cipher) ~= "string" then
     return nil, "Data Card encryption failed: " .. tostring(cipher)
   end
@@ -133,7 +133,7 @@ function M.open(secretHex, packetText)
   local expected = M.hmac(secret, "GS4\0" .. iv .. cipher)
   if not M.equal(expected, mac) then return nil, "authentication failed" end
 
-  local decryptedOK, plaintext = pcall(data.decrypt, cipher, aesKey(secret), iv)
+  local decryptedOK, plaintext = pcall(dataCall, "decrypt", cipher, aesKey(secret), iv)
   if not decryptedOK or type(plaintext) ~= "string" then
     return nil, "Data Card decryption failed: " .. tostring(plaintext)
   end
