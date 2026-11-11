@@ -109,7 +109,11 @@ local function provisionKey(isHub)
     if not dataAddress then error("Tier 3 Data Card required to generate station key.") end
     local data = component.proxy(dataAddress)
     if type(data.random) ~= "function" then error("Data Card random() unavailable.") end
-    local generated = hex(data.random(32))
+    local randomOK, randomBytes = pcall(component.invoke, dataAddress, "random", 32)
+    if not randomOK or type(randomBytes) ~= "string" or #randomBytes ~= 32 then
+      error("Tier 3 Data Card random(32) failed: " .. tostring(randomBytes))
+    end
+    local generated = hex(randomBytes)
     writeFile(keyPath, generated .. "\n")
     print("")
     print("NEW STATION KEY (64 HEX CHARACTERS). COPY PRIVATELY.")
@@ -180,30 +184,30 @@ local function main()
     error("No component of type 'data' detected. Check that the Data Card is installed and connected to this server.")
   end
 
-  local dataProxy = component.proxy(dataAddress)
+  local methodsOK, methods = pcall(component.methods, dataAddress)
+  if not methodsOK or type(methods) ~= "table" then
+    error("Could not enumerate Data Card methods: " .. tostring(methods))
+  end
   local requiredMethods = {"sha256", "encrypt", "decrypt", "random"}
   local missingMethods = {}
   for _, methodName in ipairs(requiredMethods) do
-    if type(dataProxy[methodName]) ~= "function" then
+    if methods[methodName] == nil then
       missingMethods[#missingMethods + 1] = methodName
     end
   end
   if #missingMethods > 0 then
     local reported = {}
-    local methodsOK, methods = pcall(component.methods, dataAddress)
-    if methodsOK and type(methods) == "table" then
-      for methodName, present in pairs(methods) do
-        if present then reported[#reported + 1] = tostring(methodName) end
-      end
-      table.sort(reported)
+    for methodName in pairs(methods) do
+      reported[#reported + 1] = tostring(methodName)
     end
+    table.sort(reported)
     error("Data component detected at " .. tostring(dataAddress) ..
       " but Tier 2+ cryptography methods are missing: " .. table.concat(missingMethods, ", ") ..
       ". Reported methods: " .. table.concat(reported, ", ") ..
-      ". A v4 server requires a Data Card exposing sha256, encrypt, decrypt and random.")
+      ". A v4 server requires sha256, encrypt, decrypt and random.")
   end
 
-  local randomOK, randomBytes = pcall(dataProxy.random, 16)
+  local randomOK, randomBytes = pcall(component.invoke, dataAddress, "random", 16)
   if not randomOK or type(randomBytes) ~= "string" or #randomBytes ~= 16 then
     error("Data Card random(16) self-check failed: " .. tostring(randomBytes))
   end
