@@ -45,7 +45,7 @@ The initial runtime uses one dedicated in-game port: **45840**. It does not requ
 
 ## Cryptography and trust
 
-The v4.0.1 transport uses the Tier 3 Data Card for SHA-256, AES encryption/decryption, and secure random generation. AES key derivation is truncated to 16 bytes because the Data Card's AES API requires a 128-bit key. Envelopes are encrypted and authenticated with AES plus HMAC-SHA256.
+The v4.0.2 transport uses the Tier 3 Data Card for SHA-256, AES encryption/decryption, and secure random generation. AES key derivation is truncated to 16 bytes because the Data Card's AES API requires a 128-bit key. Data Card calls use the documented `component.invoke` interface instead of relying on proxy-field lookup. Envelopes are encrypted and authenticated with AES plus HMAC-SHA256.
 
 The first bootstrap generates a fresh 32-byte station secret on GS-HUB-01 and saves its hexadecimal representation at \`/etc/galactic/master.key\`. The operator enters the same 64-hex-character secret on the other three servers. This secret must never be committed to GitHub or shown in screenshots.
 
