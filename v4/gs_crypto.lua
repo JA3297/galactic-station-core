@@ -79,7 +79,9 @@ function M.equal(a, b)
 end
 
 local function aesKey(secret)
-  return data.sha256("GALACTIC-STATION-V4-AES\0" .. secret)
+  -- OpenComputers Data Card AES uses a 128-bit (16-byte) key.
+  -- SHA-256 returns 32 bytes, so truncate the derived digest to 16 bytes.
+  return data.sha256("GALACTIC-STATION-V4-AES\0" .. secret):sub(1, 16)
 end
 
 function M.seal(secretHex, plaintext)
