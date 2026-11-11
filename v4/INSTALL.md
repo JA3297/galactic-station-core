@@ -43,6 +43,27 @@ Each server must boot from a writable hard drive, not a temporary/read-only flop
 
 Do not format or wipe the old computers merely to use v4. v4 runs on the four new servers. Keep the old cluster powered off during v4 commissioning so duplicate legacy node IDs cannot transmit on the station network.
 
+## Data Card preflight (important)
+
+Before installing GS-HUB-01, verify that the installed card exposes the required API. OpenComputers Tier 2 Data Cards add `encrypt`, `decrypt`, and `random`; Tier 3 adds elliptic-curve methods on top of that Tier 2 functionality. A component can be detected as type `data` while still lacking the methods required by this software.
+
+Run:
+
+```sh
+wget -f https://raw.githubusercontent.com/JA3297/galactic-station-core/main/v4/data_card_check.lua /tmp/data_card_check.lua
+lua /tmp/data_card_check.lua
+```
+
+For v4, the key methods must report AVAILABLE:
+- `sha256`
+- `encrypt`
+- `decrypt`
+- `random`
+
+The tests should report SHA-256 PASS, Random PASS, and AES round-trip PASS. A Tier 3 card should additionally report `generateKeyPair`, `deserializeKey`, `ecdh`, and `ecdsa` as available.
+
+If one of the required methods is missing, stop here and send the diagnostic output. Do not substitute a time/address-derived key or continue the installation. Check the actual card tier and that it is installed in a compatible card slot and exposed to the server's component network.
+
 ## 3. Install GS-HUB-01 first
 
 Use the server that will become the command, witness, and logging hub.
