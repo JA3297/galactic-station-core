@@ -1,6 +1,7 @@
 return {
   version = "4.0.0",
   common = {
+    {source="data_card_check.lua", destination="/usr/bin/data_card_check.lua"},
     {source="gs_crypto.lua", destination="/usr/lib/gs_crypto.lua"},
     {source="gs_life.lua", destination="/usr/lib/gs_life.lua"},
     {source="gsd.lua", destination="/usr/bin/gsd.lua"},
