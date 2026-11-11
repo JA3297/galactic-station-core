@@ -184,7 +184,14 @@ local function installCommon(networkId, isOperations)
   provisionKey(isOperations)
 end
 
+local function moveAside(path)
+  if filesystem.exists(path) then backupExisting(path) end
+end
+
 local function installCore(primary, networkId)
+  ensureDirectory("/etc/station")
+  moveAside("/etc/station/witness.lua")
+  moveAside("/etc/station/module.lua")
   installCommon(networkId, false)
   installRemote("v4/station_core.lua", "/usr/bin/station.lua")
   installRemote("v4/station_rc.lua", "/etc/rc.d/station.lua")
@@ -201,6 +208,9 @@ local function installCore(primary, networkId)
 end
 
 local function installOperations(networkId)
+  ensureDirectory("/etc/station")
+  moveAside("/etc/station/node.lua")
+  moveAside("/etc/station/module.lua")
   installCommon(networkId, true)
   installRemote("v4/witness.lua", "/usr/bin/witness.lua")
   installRemote("v4/witness_rc.lua", "/etc/rc.d/witness.lua")
