@@ -45,7 +45,7 @@ Do not format or wipe the old computers merely to use v4. v4 runs on the four ne
 
 ## Data Card preflight (important)
 
-The v4.0.1 crypto helper also derives a 16-byte AES key, matching the OpenComputers Data Card AES API requirement.
+The v4.0.2 crypto helper uses the documented `component.invoke(address, method, ...)` API for Data Card calls and derives a 16-byte AES key, matching the OpenComputers Data Card AES API requirement.
 
 Before installing GS-HUB-01, verify that the installed card exposes the required API. OpenComputers Tier 2 Data Cards add `encrypt`, `decrypt`, and `random`; Tier 3 adds elliptic-curve methods on top of that Tier 2 functionality. A component can be detected as type `data` while still lacking the methods required by this software.
 
