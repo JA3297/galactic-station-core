@@ -1,3 +1,6 @@
+
+**Current maintenance release: v4.0.3.** Includes the GS-LIFE-01 daemon scope fix. See [INSTALL.md](INSTALL.md).
+
 # Galactic Station v4
 
 **New clean architecture: four maxed Tier 3 OpenComputers servers.**
