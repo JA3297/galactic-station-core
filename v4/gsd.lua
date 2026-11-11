@@ -113,20 +113,29 @@ local function log(level, source, message, fields)
     if filesystem.exists(path .. ".1") then os.rename(path .. ".1", path .. ".2") end
     os.rename(path, path .. ".1")
   end
-  local f = io.open(path, "a")
-  if f then
-    f:write(serialization.serialize(record), "\n")
-    f:close()
+
+  local localWritten = false
+  local file = io.open(path, "a")
+  if file then
+    local writeOK = pcall(function()
+      assert(file:write(serialization.serialize(record), "\n"))
+      assert(file:flush())
+    end)
+    local closeOK = pcall(file.close, file)
+    localWritten = writeOK and closeOK
   end
+
+  local forwarded = false
   if cfg.role ~= "hub" and send then
-    pcall(send, nil, {
+    local sendOK, sendResult = pcall(send, nil, {
       kind = "log_record", target = cfg.manager_id,
       level = record.level, source = record.source,
       message = record.message, fields = record.fields
     })
+    forwarded = sendOK and sendResult == true
   end
+  return localWritten, forwarded
 end
-
 local function pack(message)
   message.protocol = PROTOCOL
   message.station = cfg.station_id
@@ -424,6 +433,25 @@ local function performAdmin(request)
     local ok, why = os.rename(from, to)
     if not ok then return nil, tostring(why or "rename failed") end
     return {from = from, to = to, renamed = true}
+
+  elseif op == "log_test" then
+    local token = tostring(args.token or "")
+    if #token < 8 or #token > 40 or not token:match("^[%w_-]+$") then
+      return nil, "invalid log-test token"
+    end
+    local localWritten, forwarded = log(
+      "INFO", "diagnostic.log_test", "GS_LOG_TEST:" .. token,
+      {test_id = token, test_kind = "local_write_and_hub_forward"}
+    )
+    if not localWritten then
+      return nil, "local log append/flush failed at /var/galactic/logs/gs.log"
+    end
+    return {
+      test_id = token,
+      local_log_written = true,
+      hub_packet_sent = forwarded,
+      log_path = "/var/galactic/logs/gs.log"
+    }
 
   elseif op == "tail" then
     local path, err = validPath(args.path)
