@@ -31,7 +31,7 @@ The four servers communicate over wired Network Cards on a private OpenComputers
 
 ## Release scope
 
-v4.0.0 implements encrypted messaging, remote file administration, GitHub staging, discovery, witness leases, node heartbeats, central log forwarding and read-only life-support sampling.
+v4.0.2 implements encrypted messaging, remote file administration, GitHub staging, discovery, witness leases, node heartbeats, central log forwarding and read-only life-support sampling.
 
 It is not yet a complete station automation system. Application-state replication, physical life-support failover, automatic equipment control, per-node identities, coordinated rollback and multi-drive archive replication remain future work. See [ARCHITECTURE.md](ARCHITECTURE.md) for precise boundaries.
 
