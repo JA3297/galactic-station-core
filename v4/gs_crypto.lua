@@ -6,11 +6,18 @@ local serialization = require("serialization")
 
 local dataAddress = component.list("data", true)()
 if not dataAddress then error("Galactic Station v4 requires a Data Card.") end
-local data = component.proxy(dataAddress)
-for _, method in ipairs({"sha256","encrypt","decrypt","random"}) do
-  if type(data[method]) ~= "function" then
+local methods = component.methods(dataAddress)
+local requiredMethods = {"sha256", "encrypt", "decrypt", "random"}
+for _, method in ipairs(requiredMethods) do
+  if methods[method] == nil then
     error("Data Card is missing required method: " .. method)
   end
+end
+
+-- Use component.invoke explicitly. This is the documented component API and
+-- avoids relying on proxy-field lookup behavior on different OpenOS builds.
+local function dataCall(method, ...)
+  return component.invoke(dataAddress, method, ...)
 end
 
 local M = {}
@@ -52,21 +59,21 @@ end
 
 function M.randomHex(bytes)
   bytes = math.max(1, math.min(128, math.floor(tonumber(bytes) or 32)))
-  return hex(data.random(bytes))
+  return hex(dataCall("random", bytes))
 end
 
 function M.sha256(value)
-  return data.sha256(value)
+  return dataCall("sha256", value)
 end
 
 function M.hmac(key, message)
   assert(type(key) == "string" and #key > 0, "HMAC key required")
   assert(type(message) == "string", "HMAC message must be a string")
-  if #key > 64 then key = data.sha256(key) end
+  if #key > 64 then key = dataCall("sha256", key) end
   if #key < 64 then key = key .. string.rep("\0", 64 - #key) end
   local inner = xorString(key, 0x36)
   local outer = xorString(key, 0x5c)
-  return data.sha256(outer .. data.sha256(inner .. message))
+  return dataCall("sha256", outer .. dataCall("sha256", inner .. message))
 end
 
 function M.equal(a, b)
@@ -81,7 +88,7 @@ end
 local function aesKey(secret)
   -- OpenComputers Data Card AES uses a 128-bit (16-byte) key.
   -- SHA-256 returns 32 bytes, so truncate the derived digest to 16 bytes.
-  return data.sha256("GALACTIC-STATION-V4-AES\0" .. secret):sub(1, 16)
+  return dataCall("sha256", "GALACTIC-STATION-V4-AES\0" .. secret):sub(1, 16)
 end
 
 function M.seal(secretHex, plaintext)
@@ -90,7 +97,7 @@ function M.seal(secretHex, plaintext)
   if #secret < 32 then return nil, "station key must be at least 32 bytes" end
   if type(plaintext) ~= "string" then return nil, "plaintext must be a string" end
 
-  local iv = data.random(16)
+  local iv = dataCall("random", 16)
   local encryptedOK, cipher = pcall(data.encrypt, plaintext, aesKey(secret), iv)
   if not encryptedOK or type(cipher) ~= "string" then
     return nil, "Data Card encryption failed: " .. tostring(cipher)
@@ -134,7 +141,7 @@ function M.open(secretHex, packetText)
 end
 
 function M.selfTest()
-  local sha = hex(data.sha256("abc"))
+  local sha = hex(dataCall("sha256", "abc"))
   local expectedSha = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
   local mac = hex(M.hmac("key", "The quick brown fox jumps over the lazy dog"))
   local expectedMac = "f7bc83f430538424b13298e6aa6fb143ef4d59a14946175997479dbc2d1a3cd8"
