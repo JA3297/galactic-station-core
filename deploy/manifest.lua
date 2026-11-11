@@ -1,10 +1,8 @@
--- Galactic Station deployment manifest.
--- Public software metadata only. Never place keys/passwords here.
--- The management console downloads these GitHub files and transfers them to
--- the selected host through authenticated modem management port 45822.
-
+-- Galactic Station v4 deployment manifest.
+-- Three-server topology: GS-CORE-01, GS-CORE-02, STATION-WITNESS.
+-- Public source metadata only; never place private keys in this file.
 return {
-  version = "3.0.4",
+  version = "4.0.0",
   repository = "JA3297/galactic-station-core",
   common = {
     {source = "admin_crypto.lua", destination = "/usr/lib/admin_crypto.lua"},
@@ -15,33 +13,19 @@ return {
   },
   roles = {
     core = {
-      {source = "station.lua", destination = "/usr/bin/station.lua"},
-      {source = "station_rc.lua", destination = "/etc/rc.d/station.lua"}
-    },
-    witness = {
-      {source = "witness.lua", destination = "/usr/bin/witness.lua"},
-      {source = "witness_rc.lua", destination = "/etc/rc.d/witness.lua"}
-    },
-    module = {
-      {source = "station_api.lua", destination = "/usr/lib/station_api.lua"}
-    },
-    module_agent = {
-      {source = "module_agent.lua", destination = "/usr/bin/module_agent.lua"},
-      {source = "module_agent_rc.lua", destination = "/etc/rc.d/module_agent.lua"}
-    },
-    archive = {
-      {source = "station_log_collector.lua", destination = "/usr/lib/station_log_collector.lua"},
-      {source = "station_log_collector_rc.lua", destination = "/etc/rc.d/station_log_collector.lua"}
-    },
-    safety = {
-      {source = "examples/safety_rules.lua", destination = "/etc/station/safety_rules.lua"}
-    },
-    security = {
+      {source = "v4/station_core.lua", destination = "/usr/bin/station.lua"},
+      {source = "v4/station_rc.lua", destination = "/etc/rc.d/station.lua"},
+      {source = "examples/safety_rules.lua", destination = "/etc/station/safety_rules.lua"},
       {source = "examples/acl.lua", destination = "/etc/station/acl.lua"}
     },
-    main_service = {
-      {source = "main_service_monitor.lua", destination = "/usr/bin/main_service_monitor.lua"},
-      {source = "main_service_monitor_rc.lua", destination = "/etc/rc.d/main_service_monitor.lua"}
+    witness = {
+      {source = "v4/witness.lua", destination = "/usr/bin/witness.lua"},
+      {source = "v4/witness_rc.lua", destination = "/etc/rc.d/witness.lua"},
+      {source = "v4/station_log_collector.lua", destination = "/usr/lib/station_log_collector.lua"},
+      {source = "v4/station_log_collector_rc.lua", destination = "/etc/rc.d/station_log_collector.lua"},
+      {source = "station_admin.lua", destination = "/usr/bin/station_admin.lua"},
+      {source = "admin_crypto_test.lua", destination = "/usr/bin/admin_crypto_test.lua"},
+      {source = "admin_key_setup.lua", destination = "/usr/bin/admin_key_setup.lua"}
     }
   }
 }
