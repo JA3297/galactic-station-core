@@ -12,7 +12,7 @@ local component = require("component")
 
 local BASE = "https://raw.githubusercontent.com/JA3297/galactic-station-core/main/v4/"
 local ROOT = "/etc/galactic"
-local VERSION = "4.0.0"
+local VERSION = "4.0.1"
 
 local function trim(s)
   return tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", "")
