@@ -388,20 +388,10 @@ local function updateNode(nodeId)
   addAll(manifest.common)
   if info.kind == "core" then
     addAll(manifest.roles and manifest.roles.core)
-    if info.role == "archive" then addAll(manifest.roles and manifest.roles.archive) end
-    if info.role == "safety" then addAll(manifest.roles and manifest.roles.safety) end
-    if info.role == "security" then addAll(manifest.roles and manifest.roles.security) end
   elseif info.kind == "witness" then
     addAll(manifest.roles and manifest.roles.witness)
-  elseif info.kind == "module" then
-    addAll(manifest.roles and manifest.roles.module)
-    if info.node_id == "MAIN-SERVICE-01" then
-      addAll(manifest.roles and manifest.roles.main_service)
-    else
-      addAll(manifest.roles and manifest.roles.module_agent)
-    end
   else
-    print("No deployment profile for " .. tostring(info.kind))
+    print("No v4 deployment profile for " .. tostring(info.kind))
     restoreSelection()
     return
   end
