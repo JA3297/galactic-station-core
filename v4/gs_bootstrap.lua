@@ -107,8 +107,6 @@ local function provisionKey(isHub)
   if isHub then
     local dataAddress = component.list("data", true)()
     if not dataAddress then error("Tier 3 Data Card required to generate station key.") end
-    local data = component.proxy(dataAddress)
-    if type(data.random) ~= "function" then error("Data Card random() unavailable.") end
     local randomOK, randomBytes = pcall(component.invoke, dataAddress, "random", 32)
     if not randomOK or type(randomBytes) ~= "string" or #randomBytes ~= 32 then
       error("Tier 3 Data Card random(32) failed: " .. tostring(randomBytes))
