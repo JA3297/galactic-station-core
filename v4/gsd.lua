@@ -662,7 +662,7 @@ local lastLeaseRequest = 0
 local lastHeartbeat = 0
 local lastHubTick = 0
 
-log("INFO", "gsd", "Galactic Station v4 daemon started", {role = cfg.role, version = "4.0.0"})
+log("INFO", "gsd", "Galactic Station v4 daemon started", {role = cfg.role, version = "4.0.1"})
 print("[GS v4] " .. cfg.node_id .. " online; role=" .. cfg.role .. "; port=" .. PORT)
 
 while true do
