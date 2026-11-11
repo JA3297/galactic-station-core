@@ -171,8 +171,42 @@ local function main()
   for _ in component.list("modem", true) do modemCount = modemCount + 1 end
   if modemCount == 0 then error("Wired Network Card not detected as a modem component.") end
   local dataCount = 0
-  for _ in component.list("data", true) do dataCount = dataCount + 1 end
-  if dataCount == 0 then error("Tier 3 Data Card not detected.") end
+  local dataAddress
+  for address in component.list("data", true) do
+    dataCount = dataCount + 1
+    if not dataAddress then dataAddress = address end
+  end
+  if dataCount == 0 then
+    error("No component of type 'data' detected. Check that the Data Card is installed and connected to this server.")
+  end
+
+  local dataProxy = component.proxy(dataAddress)
+  local requiredMethods = {"sha256", "encrypt", "decrypt", "random"}
+  local missingMethods = {}
+  for _, methodName in ipairs(requiredMethods) do
+    if type(dataProxy[methodName]) ~= "function" then
+      missingMethods[#missingMethods + 1] = methodName
+    end
+  end
+  if #missingMethods > 0 then
+    local reported = {}
+    local methodsOK, methods = pcall(component.methods, dataAddress)
+    if methodsOK and type(methods) == "table" then
+      for methodName, present in pairs(methods) do
+        if present then reported[#reported + 1] = tostring(methodName) end
+      end
+      table.sort(reported)
+    end
+    error("Data component detected at " .. tostring(dataAddress) ..
+      " but Tier 2+ cryptography methods are missing: " .. table.concat(missingMethods, ", ") ..
+      ". Reported methods: " .. table.concat(reported, ", ") ..
+      ". A v4 server requires a Data Card exposing sha256, encrypt, decrypt and random.")
+  end
+
+  local randomOK, randomBytes = pcall(dataProxy.random, 16)
+  if not randomOK or type(randomBytes) ~= "string" or #randomBytes ~= 16 then
+    error("Data Card random(16) self-check failed: " .. tostring(randomBytes))
+  end
 
   ensure(ROOT)
   ensure("/etc/rc.d")
@@ -195,6 +229,7 @@ local function main()
     "  protocol = 4\n}\n"
   writeFile(ROOT .. "/config.lua", configText)
 
+  install("data_card_check.lua", "/usr/bin/data_card_check.lua")
   install("gs_crypto.lua", "/usr/lib/gs_crypto.lua")
   install("gs_life.lua", "/usr/lib/gs_life.lua")
   install("gsd.lua", "/usr/bin/gsd.lua")
