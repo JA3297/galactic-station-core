@@ -1,5 +1,5 @@
 
-**Current maintenance release: v4.0.3.** Includes the GS-LIFE-01 daemon scope fix. See [INSTALL.md](INSTALL.md).
+**Current maintenance release: v4.0.4.** Includes the GS-LIFE-01 daemon scope fix. See [INSTALL.md](INSTALL.md).
 
 # Galactic Station v4
 
